@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Logg inn{% endblock %}
+
+{% block extra_head %}
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #fff0f5;
+      margin: 20px;
+      color: #333;
+    }
+
+    h1, h2, h3 {
+      color: #a8326e;
+    }
+
+    form {
+      max-width: 400px;
+      margin: 0 auto;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    button {
+      background-color: #ff5e78;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    }
+
+    button:hover {
+      background-color: #e14c66;
+      transform: scale(1.05);
+    }
+
+    p, label {
+      color: #333;
+    }
+
+    a {
+      color: #d6336c;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Logg inn</button>
+  </form>
+
+  <p>Har du ikke en konto? <a href="{% url 'signup' %}">Registrer deg her</a></p>
+{% endblock %}

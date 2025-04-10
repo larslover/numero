@@ -1,0 +1,38 @@
+#schedule-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 150px repeat(7, 150px); /* First column for time, then 7 days */
+  gap: 5px;
+  border: 1px solid #ccc;
+}
+
+.day-header, .worker-header, .volunteer-header, .time-slot {
+  background: #f0f0f0;
+  text-align: center;
+  padding: 10px;
+  font-weight: bold;
+  border: 1px solid #ddd;
+}
+
+.worker-cell, .volunteer-cell {
+  padding: 10px;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+.join-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.join-btn:hover {
+  background: #218838;
+}

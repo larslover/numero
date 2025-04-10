@@ -1,0 +1,17 @@
+{% extends "admin/index.html" %}
+{% load pending_users %}
+
+{% block content %}
+  {% with pending=count_pending_users %}
+    {% if pending > 0 %}
+      <div class="messagelist">
+        <div class="info">
+          ⚠️ There are {{ pending }} users waiting for approval.
+          <a href="{% url 'admin:auth_user_changelist' %}?is_active__exact=0">Review them</a>
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {{ block.super }}
+{% endblock %}
