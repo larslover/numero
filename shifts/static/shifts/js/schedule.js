@@ -1,26 +1,25 @@
 document.addEventListener("DOMContentLoaded", function () {
+    const apiBase = `${window.location.origin}${window.location.pathname.split("/schedule")[0]}/api`;
+
     const joinButtons = document.querySelectorAll(".join-btn, .joined-btn");
 
-    // First: Fetch the user's joined shifts on page load
-    fetch("/api/my_shifts/")
+    // Fetch the user's joined shifts
+    fetch(`${apiBase}/my_shifts/`)
         .then(response => response.json())
         .then(data => {
             if (data.status === "ok") {
-                const joinedShifts = data.shifts;  // List of shifts the user has joined
+                const joinedShifts = data.shifts;
 
-                // Loop through all join buttons
                 joinButtons.forEach(button => {
                     const date = button.getAttribute("data-date");
-                    const timeSlotCell = button.closest("tr").querySelector("td:first-child");  // Get the time slot from the current row
+                    const timeSlotCell = button.closest("tr").querySelector("td:first-child");
                     const timeSlot = timeSlotCell ? timeSlotCell.textContent.trim() : null;
 
-                    // Check if this button corresponds to a shift the user has already joined
                     const matchedShift = joinedShifts.find(shift =>
                         shift.date === date && shift.time_slot === timeSlot
                     );
 
                     if (matchedShift) {
-                        // User has joined this shift: Create the "Join" button as if they pressed it already
                         button.textContent = `👤 ${loggedInUser} | Cancel`;
                         button.classList.remove("join-btn");
                         button.classList.add("joined-btn");
@@ -29,45 +28,58 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
 
-    // Handle click events for Join / Cancel
+    // Handle Join / Cancel button clicks
     joinButtons.forEach(button => {
         button.addEventListener("click", function (event) {
             const button = event.target;
             const date = button.getAttribute("data-date");
-            const timeSlotCell = button.closest("tr").querySelector("td:first-child");  // Use the current row
+            const timeSlotCell = button.closest("tr").querySelector("td:first-child");
             const timeSlot = timeSlotCell ? timeSlotCell.textContent.trim() : null;
             const role = "volunteer";
 
-            // 👇 Cancel logic
             if (button.classList.contains("joined-btn")) {
-                fetch("/api/cancel/", {
+                // Cancel shift
+                console.log("Sending POST to cancel with:", {
+                    username: loggedInUser,
+                    date: date,
+                    time_slot: timeSlot,
+                    role: role
+                });
+
+                // Log the cancel URL being requested
+                console.log(`${apiBase}/cancel/`);  // Check the URL
+                console.log(getCSRFToken());
+                fetch(`${apiBase}/cancel/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                         "X-CSRFToken": getCSRFToken(),
                     },
+                    credentials: "same-origin", // added for better CSRF handling
                     body: JSON.stringify({
                         username: loggedInUser,
                         date: date,
-                        time_slot: timeSlot
+                        time_slot: timeSlot,
+                        role: role
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Cancel response from backend:", data);
-                    if (data.status === "deleted") {
-                        // Change button back to "Join" after cancellation
+                    console.log("Cancel response:", data);
+                    if (data.status === "success") {
                         button.textContent = "Bli med";
                         button.classList.remove("joined-btn");
                         button.classList.add("join-btn");
+                    } else {
+                        alert(data.message || "Failed to cancel shift.");
                     }
                 });
 
-                return; // 🛑 Stop here — don't run join logic
+                return; // Ensure the event handler returns after canceling
             }
 
-            // 👉 Join logic
-            fetch("/api/join/", {
+            // If it's not a joined button, it may be a join button
+            fetch(`${apiBase}/join/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -82,11 +94,13 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(response => response.json())
             .then(data => {
-                console.log("Join response from backend:", data);
+                console.log("Join response:", data);
                 if (data.status === "success" && data.created) {
                     button.textContent = `👤 ${loggedInUser} | Cancel`;
                     button.classList.remove("join-btn");
                     button.classList.add("joined-btn");
+                } else {
+                    alert(data.message || "Failed to join shift.");
                 }
             });
         });

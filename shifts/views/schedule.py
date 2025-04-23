@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
 from django.shortcuts import render
-
-from .models import VolunteerLimit
+from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
 from django.db.models import Q
-from .models import ShiftAssignment, VolunteerLimit
 from django.contrib.auth.models import User
-from .models import TimeSlot
+
 
 weekday_times = TimeSlot.objects.filter(is_weekend=False)
 saturday_times = TimeSlot.objects.filter(is_weekend=True)
@@ -81,5 +79,5 @@ def schedule_view(request, week_offset=0):
         "volunteer_limits": volunteer_limits,
         "all_users": User.objects.all() if request.user.is_staff else [],
     }
-
+    context["timestamp"] = datetime.now().timestamp()
     return render(request, "shifts/schedule.html", context)

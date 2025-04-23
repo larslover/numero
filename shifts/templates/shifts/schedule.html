@@ -58,7 +58,6 @@
                 <th rowspan="2">Tid</th>
                 {% for weekday, date in weekdays_combined %}
                 <th colspan="2">{{ weekday|translate_weekday }}<br><small>{{ date }}</small></th>
-
                 {% endfor %}
             </tr>
             <tr>
@@ -74,6 +73,8 @@
                     <td>{{ time.label }}</td>
                     {% for weekday, date in weekdays_combined %}
                         {% get_shift shifts date time as shift %}
+                        
+                        <!-- Worker column -->
                         <td>
                             {% if shift %}
                                 {% for worker in shift.workers %}
@@ -81,14 +82,17 @@
                                 {% endfor %}
                             {% endif %}
                         </td>
+
+                        <!-- Volunteer column -->
                         <td>
+                            {% with role="volunteer" %}
                             {% if shift %}
                                 {% if username in shift.users %}
-                                    <button class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}">
+                                <button type="button" class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
                                         {{ username }} | Avbryt
                                     </button>
                                 {% elif shift.users|length < shift.max_slots %}
-                                    <button class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}">
+                                <button type="button" class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
                                         Bli med
                                     </button>
                                 {% endif %}
@@ -98,6 +102,7 @@
                                     {% endif %}
                                 {% endfor %}
                             {% endif %}
+                            {% endwith %}
                         </td>
                     {% endfor %}
                 </tr>
@@ -128,6 +133,8 @@
                     <td>{{ time.label }}</td>
                     {% for date in weekend_dates %}
                         {% get_shift shifts date time as shift %}
+
+                        <!-- Worker column -->
                         <td>
                             {% if shift %}
                                 {% for worker in shift.workers %}
@@ -149,14 +156,17 @@
                                 {% endif %}
                             {% endif %}
                         </td>
+
+                        <!-- Volunteer column -->
                         <td>
+                            {% with role="volunteer" %}
                             {% if shift %}
                                 {% if username in shift.users %}
-                                    <button class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}">
+                                <button type="button" class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
                                         {{ username }} | Avbryt
                                     </button>
                                 {% elif shift.users|length < shift.max_slots %}
-                                    <button class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}">
+                                <button type="button" class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
                                         Bli med
                                     </button>
                                 {% endif %}
@@ -166,6 +176,7 @@
                                     {% endif %}
                                 {% endfor %}
                             {% endif %}
+                            {% endwith %}
                         </td>
                     {% endfor %}
                 </tr>
@@ -175,7 +186,12 @@
 
     <script>
         const loggedInUser = "{{ request.user.username|escapejs }}";
+        console.log("Logged in user:", loggedInUser);  // Debugging
     </script>
-    <script src="{% static 'shifts/js/schedule.js' %}"></script>
+
+<script src="{% static 'shifts/js/schedule.js' %}?v={{ timestamp }}"></script>
+
+
+    
 </body>
 </html>
