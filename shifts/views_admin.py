@@ -4,6 +4,28 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.shortcuts import render
+# admin_views.py
+from django.http import JsonResponse
+from .models import TimeSlot
+import datetime
+
+def get_time_slots(request):
+    date_str = request.GET.get("date")
+    try:
+        print(f"Received date: {date_str}")  # Debugging: log the received date
+        date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        is_weekend = date_obj.weekday() >= 5
+        print(f"Is the date a weekend? {'Yes' if is_weekend else 'No'}")  # Debugging: log if the date is a weekend or weekday
+
+        slots = TimeSlot.objects.filter(is_weekend=is_weekend)
+        print(f"Filtered slots: {slots}")  # Debugging: log the filtered slots
+
+        data = [{"id": slot.id, "label": slot.label} for slot in slots]
+    except Exception as e:
+        print(f"Error: {e}")  # Log the error if it occurs
+        data = []
+
+    return JsonResponse(data, safe=False)
 
 def admin_check(user):
     return user.is_staff

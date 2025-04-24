@@ -2,7 +2,12 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django import forms
-from .models import ShiftAssignment
+from .models import ShiftAssignment, TimeSlot
+import datetime
+from django.contrib import admin
+
+
+
 class SignupForm(UserCreationForm):
     class Meta:
         model = User
@@ -14,12 +19,24 @@ class SignupForm(UserCreationForm):
         if commit:
             user.save()
         return user
-# forms.py
+
 
 
 class ShiftAssignmentForm(forms.ModelForm):
     class Meta:
         model = ShiftAssignment
-        fields = ['date', 'time_slot', 'role']  # Include the fields you want the user to input
+        fields = '__all__'
 
-    # Optionally, you can add custom validation or modify the behavior of the form
+    class Media:
+        js = ('shifts/js/time_slot_dynamic.js',)  # this is your custom JS
+
+class ShiftAssignmentAdmin(admin.ModelAdmin):
+    form = ShiftAssignmentForm
+    list_display = ("user", "date", "time_slot", "role")
+    list_filter = ("date", "time_slot", "role")
+    search_fields = ("user__username", "date", "time_slot")
+    ordering = ("date", "time_slot")
+
+    class Media:
+        js = ("js/time_slot_dynamic.js",)  # Custom JS to load time slots dynamically
+
