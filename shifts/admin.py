@@ -8,6 +8,16 @@ from django.contrib.admin import SimpleListFilter
 from django.http import JsonResponse
 from .models import TimeSlot
 import datetime
+from .models import UserProfile
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = "Profile"
+   
+    fields = ('role', 'bio', 'phone_number') 
+
 
 def get_time_slots(request):
     date_str = request.GET.get("date")
@@ -70,6 +80,8 @@ class VolunteerLimitAdmin(admin.ModelAdmin):
 
 # ✅ Custom User admin with approval
 class UserAdmin(admin.ModelAdmin):
+    inlines = [UserProfileInline]  # 👈 Add this line
+
     list_display = ("username", "email", "is_active", "date_joined")
     list_filter = ("is_active", "date_joined")
     actions = ["approve_users"]
@@ -88,6 +100,7 @@ class UserAdmin(admin.ModelAdmin):
                 )
 
     approve_users.short_description = "Approve selected users"
+
 
 # Replace default User admin
 admin.site.unregister(User)

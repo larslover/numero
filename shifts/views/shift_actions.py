@@ -4,70 +4,68 @@ from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 import json
-from django.views.decorators.csrf import csrf_exempt
-from ..models import ShiftAssignment, TimeSlot, VolunteerLimit  # Ensure VolunteerLimit is imported
-from django.http import JsonResponse
-
+from ..models import ShiftAssignment, TimeSlot, VolunteerLimit # Ensure VolunteerLimit is imported
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.auth.models import User
+from django.shortcuts import redirect
+from django.views.decorators.csrf import csrf_exempt
+import json  # Make sure you import json if you haven't already
 
+
+@csrf_exempt
 def join_shift(request):
-    try:
-        data = json.loads(request.body)
-        username = data.get('username')
-        date = data.get('date')
-        time_slot_label = data.get('time_slot')  # e.g., "8:00 - 14:00"
-        role = data.get('role')
-
-        # Ensure required fields are present
-        if not username or not date or not time_slot_label or not role:
-            return JsonResponse({'status': 'error', 'message': 'Missing required fields'})
-
-        # Fetch TimeSlot based on time_slot_label
+    if request.method == 'POST':
         try:
-            time_slot = TimeSlot.objects.get(label=time_slot_label)
-        except TimeSlot.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Time slot not found'})
+            # Parse the incoming JSON data
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            date = data.get('date')
+            time_slot_label = data.get('time_slot')
+            role = data.get('role')
 
-        # Fetch the user
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'User not found'})
+            # Check that all required fields are provided
+            if not user_id or not date or not time_slot_label or not role:
+                return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
 
-        # Check if the user has already joined the shift
-        existing_assignment = ShiftAssignment.objects.filter(
-            user=user,
-            date=date,
-            time_slot=time_slot,
-            role=role
-        ).first()
+            # Ensure that the user exists
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'User not found'}, status=400)
 
-        if existing_assignment:
-            return JsonResponse({'status': 'error', 'message': 'Already joined the shift'})
+            # Ensure that the time slot exists
+            try:
+                time_slot = TimeSlot.objects.get(label=time_slot_label)
+            except TimeSlot.DoesNotExist:
+                return JsonResponse({'status': 'error', 'message': 'Invalid time slot'}, status=400)
 
-        # Check if the volunteer limit has been reached
-        try:
-            volunteer_limit = VolunteerLimit.objects.get(date=date)
-            current_volunteers = ShiftAssignment.objects.filter(date=date, role='volunteer').count()
-            if current_volunteers >= volunteer_limit.limit:
-                return JsonResponse({'status': 'error', 'message': 'Volunteer limit reached for this date'})
-        except VolunteerLimit.DoesNotExist:
-            pass  # No limit defined, proceed with the join
+            # Check if the user is already assigned to this shift
+            existing_shift = ShiftAssignment.objects.filter(
+                user=user,
+                date=date,
+                time_slot=time_slot,
+                role=role
+            ).exists()
 
-        # Create a new ShiftAssignment
-        new_assignment = ShiftAssignment.objects.create(
-            user=user,
-            date=date,
-            time_slot=time_slot,
-            role=role
-        )
+            if existing_shift:
+                return JsonResponse({'status': 'error', 'message': 'User is already booked for this shift'}, status=400)
 
-        return JsonResponse({'status': 'success', 'created': True})
+            # Create the ShiftAssignment
+            shift_assignment = ShiftAssignment.objects.create(
+                user=user,
+                date=date,
+                time_slot=time_slot,
+                role=role
+            )
 
-    except Exception as e:
-        # Log the error and return a generic error response
-        print(f"Error occurred: {e}")
-        return JsonResponse({'status': 'error', 'message': 'Internal Server Error'}, status=500)
+            return JsonResponse({'status': 'success', 'message': 'Shift joined successfully'}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 @csrf_exempt
 @login_required
@@ -84,13 +82,14 @@ def cancel_shift(request):
             data = json.loads(request.body)
             
             # Check if all required fields are present
-            username = data.get('username')
+            user_id = data.get('user_id')
             date = data.get('date')
             time_slot_label = data.get('time_slot')
             role = data.get('role')
 
-            if not username or not date or not time_slot_label or not role:
-                return JsonResponse({'status': 'error', 'message': 'Missing required fields'})
+            if not user_id or not date or not time_slot_label or not role:
+              return JsonResponse({'status': 'error', 'message': 'Missing required fields'})
+
 
             # Fetch TimeSlot based on time_slot_label
             try:
@@ -100,9 +99,10 @@ def cancel_shift(request):
 
             # Fetch the user
             try:
-                user = User.objects.get(username=username)
+                user = User.objects.get(id=user_id)
             except User.DoesNotExist:
                 return JsonResponse({'status': 'error', 'message': 'User not found'})
+
 
             # Check if the user is assigned to the shift
             shift_to_cancel = ShiftAssignment.objects.filter(
@@ -130,51 +130,62 @@ def cancel_shift(request):
         return JsonResponse({'status': 'error', 'message': 'Invalid HTTP method. Use POST.'}, status=405)
 
 
-@login_required
-@csrf_exempt
+
+
+
+
 
 def save_shifts(request):
     if request.method == "POST":
         try:
-            # Get the data from the frontend
             data = json.loads(request.body)
+
             username = data.get('username')
+            date = data.get('date')
+            time_slot_label = data.get('time_slot')  # e.g. "12:00 PM - 1:00 PM"
+            role = data.get('role', 'worker')  # Default to 'worker' if not specified
 
-            if not username:
-                return JsonResponse({"success": False, "message": "Username is required."})
+            if not username or not date or not time_slot_label:
+                return JsonResponse({
+                    "success": False,
+                    "message": "Username, date, and time slot are required."
+                })
 
-            # Get the user based on the provided username
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
-                return JsonResponse({"success": False, "message": f"User with username '{username}' does not exist."})
+                return JsonResponse({
+                    "success": False,
+                    "message": f"User with username '{username}' does not exist."
+                })
 
-            # Check if the shift already exists
-            existing_shift = ShiftAssignment.objects.filter(
-                user=user,
-                date='2025-04-07',  # Adjust as per your requirements
-                time_slot='12:00 PM - 1:00 PM',
-                role='worker'
-            ).exists()
+            try:
+                time_slot = TimeSlot.objects.get(label=time_slot_label)
+            except TimeSlot.DoesNotExist:
+                return JsonResponse({
+                    "success": False,
+                    "message": f"Time slot '{time_slot_label}' does not exist."
+                })
 
-            if existing_shift:
-                return JsonResponse({"success": False, "message": "Shift for this user already exists."})
+            # Check for existing shift
+            if ShiftAssignment.objects.filter(user=user, date=date, time_slot=time_slot, role=role).exists():
+                return JsonResponse({
+                    "success": False,
+                    "message": "Shift for this user already exists."
+                })
 
             # Create and save the shift
-            shift = ShiftAssignment.objects.create(
+            ShiftAssignment.objects.create(
                 user=user,
-                date='2025-04-07',  # Adjust as per your requirements
-                time_slot='12:00 PM - 1:00 PM',  # Adjust as per your requirements
-                role='worker'
+                date=date,
+                time_slot=time_slot.label,
+                role=role
             )
-            shift.save()  # Ensure save() is called
-            
-            # Return success response
+
             return JsonResponse({"success": True, "message": "Shift saved successfully."})
-        
+
         except Exception as e:
-            # Log the error and return a response
-            print(f"Error saving shift: {e}")  # Replace with proper logging if needed
+            print(f"Error saving shift: {e}")
             return JsonResponse({"success": False, "message": str(e)})
 
     return JsonResponse({"success": False, "message": "Invalid request method. Only POST is allowed."})

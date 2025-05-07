@@ -6,192 +6,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="username" content="{{ request.user.username }}">
     <title>Ukentlig Vaktplan</title>
     <link rel="stylesheet" href="{% static 'shifts/css/schedule.css' %}">
-    <style>
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .navigation {
-            margin-top: 5px;
-        }
-
-        h1 {
-            margin: 0;
-        }
-    </style>
 </head>
+
 <body>
+<div class="main-container">
 
+    <!-- Top bar -->
     <div class="top-bar">
-        <h1>Uke {{ week_number }} – Vaktplan</h1>
-        <div class="user-info">
-            <span>Velkommen, {{ username }}</span>
-            <a href="{% url 'logout' %}">Logg ut</a>
+        <div class="top-left">
+            <h1>Uke {{ week_number }} – Vaktplan</h1>
+            <p><strong>I dag:</strong> {{ today_date }}</p>
+        </div>
+        <div class="top-right">
+            <div class="user-info">
+                <span>Velkommen, {{ username }}</span>
+                <a href="{% url 'logout' %}">Logg ut</a>
+            </div>
+            <div class="navigation">
+                <a href="{% url 'schedule_week' 0 %}">← Denne uke</a> |
+                <a href="{% url 'schedule_week' week_offset|add:-1 %}">← Forrige uke</a> |
+                <a href="{% url 'schedule_week' week_offset|add:1 %}">Neste uke →</a>
+            </div>
+            {% if request.user.is_staff %}
+            <div style="margin-top: 10px;">
+                <a href="/en/admin/" class="admin-back-btn">
+                    <span class="arrow-left"></span> Tilbake til Admin
+                </a>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <div class="top-bar">
-        <p style="margin: 0;"><strong>I dag:</strong> {{ today_date }}</p>
-        <div class="navigation">
-            <a href="{% url 'schedule_week' week_offset|add:'-1' %}">← Forrige uke</a> |
-            <a href="{% url 'schedule_week' week_offset|add:'1' %}">Neste uke →</a>
-        </div>
-    </div>
+    <!-- Layout container: list on the left, tables on the right -->
+    <div class="content-layout" style="display: flex; gap: 20px; align-items: flex-start;">
 
-    <!-- WEEKDAYS TABLE -->
-    <h3>Hverdager</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th rowspan="2">Tid</th>
-                {% for weekday, date in weekdays_combined %}
-                <th colspan="2">{{ weekday|translate_weekday }}<br><small>{{ date }}</small></th>
+        {% if request.user.is_staff %}
+        <!-- Worker list on the left for admins -->
+        <aside class="sidebar">
+            <h3>Alle Ansatte</h3>
+            <ul id="worker-list">
+                {% for user in workers_for_admin %}
+                <li id="worker-{{ user.id }}"
+                class="worker"
+                draggable="true"
+                data-username="{{ user.username }}"
+                data-userid="{{ user.id }}">
+                {{ user.username }}
+            </li>
+            
                 {% endfor %}
-            </tr>
-            <tr>
-                {% for weekday, date in weekdays_combined %}
-                    <th>Ansatt</th>
-                    <th>Frivillig</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for time in weekday_times %}
-                <tr>
-                    <td>{{ time.label }}</td>
-                    {% for weekday, date in weekdays_combined %}
-                        {% get_shift shifts date time as shift %}
-                        
-                        <!-- Worker column -->
-                        <td>
-                            {% if shift %}
-                                {% for worker in shift.workers %}
-                                    <p>{{ worker }}</p>
-                                {% endfor %}
-                            {% endif %}
-                        </td>
+            </ul>
+            <div id="trash-bin" ondragover="event.preventDefault()" ondrop="handleTrashDrop(event)">
+                🗑️ Drag here to remove
+              </div>
+              
+        </aside>
+        {% endif %}
 
-                        <!-- Volunteer column -->
-                        <td>
-                            {% with role="volunteer" %}
-                            {% if shift %}
-                                {% if username in shift.users %}
-                                <button type="button" class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
-                                        {{ username }} | Avbryt
-                                    </button>
-                                {% elif shift.users|length < shift.max_slots %}
-                                <button type="button" class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
-                                        Bli med
-                                    </button>
-                                {% endif %}
-                                {% for user in shift.users %}
-                                    {% if user != username %}
-                                        <p>{{ user }}</p>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                            {% endwith %}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+        <!-- Tables always visible -->
+        <div class="tables-container" style="flex: 1;">
 
-    <!-- SATURDAY TABLE -->
-    <h3>Lørdag</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th rowspan="2">Tid</th>
-                {% for date in weekend_dates %}
-                    <th colspan="2">Lørdag<br><small>{{ date }}</small></th>
-                {% endfor %}
-            </tr>
-            <tr>
-                {% for date in weekend_dates %}
-                    <th>Ansatt</th>
-                    <th>Frivillig</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for time in saturday_times %}
-                <tr>
-                    <td>{{ time.label }}</td>
-                    {% for date in weekend_dates %}
-                        {% get_shift shifts date time as shift %}
+            <!-- WEEKDAY TABLE -->
+           
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Tid</th>
+                        {% for weekday, date in weekdays_combined %}
+                            <th colspan="2">{{ weekday|translate_weekday }}<br><small>{{ date }}</small></th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for weekday, date in weekdays_combined %}
+                            <th>Ansatt</th>
+                            <th>Frivillig</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for time in weekday_times %}
+                    <tr>
+                        <td>{{ time.label }}</td>
+                        {% for weekday, date in weekdays_combined %}
+                            {% get_shift shifts date time as shift %}
 
-                        <!-- Worker column -->
-                        <td>
-                            {% if shift %}
-                                {% for worker in shift.workers %}
-                                    <p>{{ worker }}</p>
-                                {% endfor %}
-
-                                {% if request.user.is_staff %}
-                                    <form method="post" action="{% url 'assign_worker' %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="date" value="{{ date }}">
-                                        <input type="hidden" name="time_slot" value="{{ time.label }}">
-                                        <select name="user_id">
-                                            {% for user in all_users %}
-                                                <option value="{{ user.id }}">{{ user.username }}</option>
-                                            {% endfor %}
-                                        </select>
-                                        <button type="submit">Tildel Ansatt</button>
-                                    </form>
-                                {% endif %}
-                            {% endif %}
-                        </td>
-
-                        <!-- Volunteer column -->
-                        <td>
-                            {% with role="volunteer" %}
-                            {% if shift %}
-                                {% if username in shift.users %}
-                                <button type="button" class="joined-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
-                                        {{ username }} | Avbryt
-                                    </button>
-                                {% elif shift.users|length < shift.max_slots %}
-                                <button type="button" class="join-btn" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-role="{{ role }}">
-                                        Bli med
-                                    </button>
-                                {% endif %}
-                                {% for user in shift.users %}
-                                    {% if user != username %}
-                                        <p>{{ user }}</p>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                            {% endwith %}
-                        </td>
-                    {% endfor %}
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <script>
-        const loggedInUser = "{{ request.user.username|escapejs }}";
-        console.log("Logged in user:", loggedInUser);  // Debugging
-    </script>
-
-<script src="{% static 'shifts/js/schedule.js' %}?v={{ timestamp }}"></script>
-
-
+                         
+                                                       <!-- Worker -->
+<td class="worker-drop-target"
+    id="slot-{{ date }}-{{ time.label }}-worker"
+    data-date="{{ date }}"
+    data-time-slot="{{ time.label }}"
+    data-timeslotid="{{ time.id }}">
     
+    {% if request.user.is_staff %}
+    <div class="worker-drop-zone">
+
+    {% endif %}
+    
+    {% if shift and shift.workers %}
+        {% for worker in shift.workers %}
+            <div class="worker-name"
+                 id="worker-{{ worker.id }}"
+                 data-userid="{{ worker.id }}"
+                 data-username="{{ worker.name }}"
+                 data-date="{{ date }}"
+                 data-timeslot="{{ time.label }}"
+                 data-timeslotid="{{ time.id }}"
+                 draggable="true">
+                {{ worker }}
+            </div>
+        {% endfor %}
+    {% endif %}
+</td>
+
+
+                            <!-- Volunteer -->
+                            <td class="volunteer-slot"
+                                data-date="{{ date }}"
+                                data-time-slot="{{ time.label }}"
+                                data-users="{{ shift.users|join:',' }}"
+                                data-max-slots="{{ shift.max_slots }}"
+                                data-role="volunteer">
+                                <!-- JS will insert buttons and names here -->
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+          
+            
+            <!-- SATURDAY TABLE -->
+          
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th rowspan="2">Tid</th>
+                        {% for date in weekend_dates %}
+                            <th colspan="2">Lørdag<br><small>{{ date }}</small></th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for date in weekend_dates %}
+                            <th>Ansatt</th>
+                            <th>Frivillig</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for time in saturday_times %}
+                    <tr>
+                        <td>{{ time.label }}</td>
+                        {% for date in weekend_dates %}
+                            {% get_shift shifts date time as shift %}
+                      
+
+
+                           <!-- Worker -->
+                           <td class="worker-drop-target"
+                           id="slot-{{ date }}-{{ time.label }}-worker"
+                           data-date="{{ date }}"
+                           data-time-slot="{{ time.label }}"
+                           data-timeslotid="{{ time.id }}">
+                           
+                           {% if request.user.is_staff %}
+                           <div class="worker-drop-zone">
+                           {% endif %}
+                       
+                           {% if shift and shift.workers %}
+                               {% for worker in shift.workers %}
+                               
+                               <div class="worker-name"
+                               id="worker-{{ worker.id }}"
+                               draggable="true"
+                               ondragstart="drag(event)"
+                               data-userid="{{ worker.id }}"
+                               data-username="{{ worker.name }}"
+                               data-date="{{ date }}"
+                               data-timeslot="{{ time.label }}"
+                               data-timeslotid="{{ time.id }}">
+                              {{ worker }}
+                          </div>
+                          
+                               {% endfor %}
+                           {% endif %}
+                       
+                           {% if request.user.is_staff %}
+                           </div>
+                           
+                           {% endif %}
+                       </td>
+                       
+                        
+
+                            <!-- Volunteer -->
+                            <td class="volunteer-slot"
+                                data-date="{{ date }}"
+                                data-time-slot="{{ time.label }}"
+                                data-users="{{ shift.users|join:',' }}"
+                                data-max-slots="{{ shift.max_slots }}"
+                                data-role="volunteer">
+                                <!-- JS will insert buttons and names here -->
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+    const loggedInUser = "{{ request.user.username|default:''|escapejs }}";
+    const loggedInUserId = "{{ request.user.id|default:'null' }}";
+    const csrftoken = '{{ csrf_token }}';
+</script>
+
+{% if request.user.is_staff %}
+    <script src="{% static 'shifts/js/admin_schedule.js' %}"></script>
+{% else %}
+    <script src="{% static 'shifts/js/schedule.js' %}"></script>
+{% endif %}
+
 </body>
 </html>

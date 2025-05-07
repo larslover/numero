@@ -30,6 +30,7 @@ class ShiftAssignmentForm(forms.ModelForm):
     class Media:
         js = ('shifts/js/time_slot_dynamic.js',)  # this is your custom JS
 
+
 class ShiftAssignmentAdmin(admin.ModelAdmin):
     form = ShiftAssignmentForm
     list_display = ("user", "date", "time_slot", "role")
@@ -37,6 +38,15 @@ class ShiftAssignmentAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "date", "time_slot")
     ordering = ("date", "time_slot")
 
-    class Media:
-        js = ("js/time_slot_dynamic.js",)  # Custom JS to load time slots dynamically
+    readonly_fields = ("user", "date", "time_slot", "role")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 

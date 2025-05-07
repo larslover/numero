@@ -1,14 +1,18 @@
 from datetime import datetime, timedelta
 from django.shortcuts import render
 from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
-from django.db.models import Q
 from django.contrib.auth.models import User
+import logging
 
+logger = logging.getLogger(__name__)
 
+# Pull time slots from DB
 weekday_times = TimeSlot.objects.filter(is_weekend=False)
 saturday_times = TimeSlot.objects.filter(is_weekend=True)
 
 def schedule_view(request, week_offset=0):
+    logger.debug(f"Week Offset: {week_offset}")
+
     today = datetime.now()
     target_week = today + timedelta(weeks=int(week_offset))
     start_of_week = target_week - timedelta(days=target_week.weekday())
@@ -30,13 +34,19 @@ def schedule_view(request, week_offset=0):
         for obj in VolunteerLimit.objects.all()
     }
 
+    # Loop for weekdays (Monday to Friday)
     for i in range(5):
         date = start_of_week + timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
         for time_slot in weekday_time_slots:
             assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
-            volunteers = [a.user.username for a in assignments if a.role == "volunteer"]
-            workers = [a.user.username for a in assignments if a.role == "worker"]
+            volunteers = [a.user for a in assignments if a.role == "volunteer"]
+            workers = [a.user for a in assignments if a.role == "worker"]
+
+            
+            logger.debug(f"Assignments for {date_str} {time_slot.label}: {assignments}")
+            logger.debug(f"Workers for {date_str} {time_slot.label}: {workers}")
+
             shift_info = {
                 "date": date_str,
                 "time_slot": time_slot,  # ✅ use label for display
@@ -44,17 +54,23 @@ def schedule_view(request, week_offset=0):
                 "workers": workers,
                 "max_slots": volunteer_limits.get(date_str, 2),
             }
+
             shifts.append(shift_info)
             shift_map[f"{date_str}|{time_slot.label}"] = shift_info
 
-    # Saturday
+    # Loop for Saturday
     saturday_date = start_of_week + timedelta(days=5)
     saturday_str = saturday_date.strftime("%Y-%m-%d")
 
     for time_slot in saturday_time_slots:
         assignments = ShiftAssignment.objects.filter(date=saturday_date, time_slot=time_slot)
         volunteers = [a.user.username for a in assignments if a.role == "volunteer"]
-        workers = [a.user.username for a in assignments if a.role == "worker"]
+        workers = [a.user for a in assignments if a.role == "worker"]
+
+
+        logger.debug(f"Assignments for {saturday_str} {time_slot.label}: {assignments}")
+        logger.debug(f"Workers for {saturday_str} {time_slot.label}: {workers}")
+
         shift_info = {
             "date": saturday_str,
             "time_slot": time_slot,
@@ -62,8 +78,10 @@ def schedule_view(request, week_offset=0):
             "workers": workers,
             "max_slots": volunteer_limits.get(saturday_str, 2),
         }
+
         shifts.append(shift_info)
         shift_map[f"{saturday_str}|{time_slot.label}"] = shift_info
+        workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
 
     context = {
         "week_number": target_week.isocalendar()[1],
@@ -78,6 +96,8 @@ def schedule_view(request, week_offset=0):
         "shift_map": shift_map,
         "volunteer_limits": volunteer_limits,
         "all_users": User.objects.all() if request.user.is_staff else [],
+         "workers_for_admin": workers_for_admin,  # Only workers for admin
     }
+
     context["timestamp"] = datetime.now().timestamp()
     return render(request, "shifts/schedule.html", context)

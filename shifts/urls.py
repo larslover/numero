@@ -2,24 +2,34 @@
 from django.urls import path
 from .views_auth import custom_login, signup, custom_logout
 from .views_admin import approve_users, admin_dashboard_view, assign_worker
-from .views.schedule import schedule_view
-
+from .views.schedule import schedule_view  # Import directly from the correct file
+from django.views.generic import RedirectView
 import shifts.views_admin as views_admin
-
+from django.urls import path, re_path
 from .views.shift_actions import (
     join_shift, cancel_shift,
     save_shifts, get_saved_shifts, my_shifts_view
 )
+from .views.schedule import schedule_view
 
-from .views_admin import get_time_slots
-
-
+from .views_admin import get_time_slots,assign_shift
+from django.urls import re_path
 urlpatterns = [
+    path('api/remove/', views_admin.remove_shift_assignment, name='remove_shift'),
+    path('', RedirectView.as_view(url='/schedule/', permanent=False)),
     path("get-time-slots/", get_time_slots, name="get_time_slots"),
-    path("assign_worker/", assign_worker, name="assign_worker"),
+    path('assign_worker/', assign_worker, name='assign_worker'),
     path("logout/", custom_logout, name="logout"),
-    path("schedule/", schedule_view, name="schedule"),
-    path("schedule/<slug:week_offset>/", schedule_view, name="schedule_week"),
+    path('schedule/', schedule_view, name='schedule_view'),
+    path('api/assign/',assign_shift, name='assign_shift'),
+
+
+# Modify the URL pattern to accept negative numbers
+    re_path(r'^schedule/(?P<week_offset>-?\d+)/$', schedule_view, name='schedule_week'),
+
+
+  
+    path("api/save_shifts/", save_shifts, name="save_shifts"),
     path("api/my_shifts/", my_shifts_view, name="my_shifts"),
     path("api/join/", join_shift, name="join_shift"),
     path("api/cancel/", cancel_shift, name="cancel_shift"),

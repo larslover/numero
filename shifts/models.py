@@ -1,9 +1,19 @@
 # models.py
+from django.db import models
+from django.contrib.auth.models import User
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
+from django.contrib.auth.models import User
 
+class Shift(models.Model):
+    date = models.DateField()
+    time_slot = models.CharField(max_length=100)  # E.g., "12:00 PM - 1:00 PM"
+    workers = models.ManyToManyField(User, related_name='assigned_shifts')
+
+    def __str__(self):
+        return f"{self.date} - {self.time_slot}"
 class TimeSlot(models.Model):
     label = models.CharField(_("Tidspunkt"), max_length=50, unique=True)  # e.g., "8:00–10:00"
     is_weekend = models.BooleanField(_("Helg?"), default=False)
@@ -48,3 +58,19 @@ class ShiftAssignment(models.Model):
 
     def __str__(self):
         return f"{self.user.username} som {self.get_role_display()} {self.date} kl. {self.time_slot}"
+
+
+
+class UserProfile(models.Model):
+    ROLE_CHOICES = [
+        ('worker', 'Worker'),
+        ('volunteer', 'Volunteer'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  # Link to User model
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)  # Can be Worker or Volunteer
+    bio = models.TextField(blank=True, null=True)  # Optional additional info about the user
+    phone_number = models.CharField(max_length=15, blank=True, null=True)  # Optional contact number
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()}"

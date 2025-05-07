@@ -6,3 +6,4 @@ class ShiftsConfig(AppConfig):
 
     def ready(self):
         import shifts.templatetags.custom_filters  # 👈 Force Django to load it
+        import shifts.signals  # 👈 add this line to activate signals

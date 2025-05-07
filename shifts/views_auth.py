@@ -8,6 +8,8 @@ from django.shortcuts import render, redirect
 from .forms import SignupForm
 from django.core.mail import send_mail
 from django.conf import settings
+# views_admin.py
+
 
 def signup(request):
     if request.method == "POST":
@@ -23,6 +25,7 @@ def signup(request):
         form = SignupForm()
     return render(request, "signup.html", {"form": form})
 
+from django.contrib import messages  # to display messages in the template
 
 def custom_login(request):
     print("Login view triggered!")
@@ -30,11 +33,18 @@ def custom_login(request):
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
             user = form.get_user()
+            
+            # Check if the user is approved before logging in
+            if hasattr(user, 'is_approved') and not user.is_approved:
+                messages.warning(request, "Your account is pending approval. Please wait for confirmation.")
+                return render(request, "registration/login.html", {"form": form})
+
             login(request, user)
-            return redirect('admin:index' if user.is_superuser else "schedule")
+            return redirect('admin:index' if user.is_superuser else "schedule_view")
     else:
         form = AuthenticationForm()
     return render(request, "registration/login.html", {"form": form})
+
 
 
 def custom_logout(request):

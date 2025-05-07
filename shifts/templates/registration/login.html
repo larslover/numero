@@ -21,22 +21,52 @@
       background-color: #fff;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     button {
       background-color: #ff5e78;
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 10px 20px;
       border-radius: 6px;
       cursor: pointer;
+      font-weight: bold;
       transition: background-color 0.2s ease-in-out, transform 0.1s ease;
     }
 
     button:hover {
       background-color: #e14c66;
       transform: scale(1.05);
+    }
+
+    .messages {
+      list-style: none;
+      padding: 0;
+      max-width: 400px;
+      margin: 0 auto 20px auto;
+    }
+
+    .messages li {
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .messages li.info {
+      background-color: #d9edf7;
+      color: #31708f;
+    }
+
+    .messages li.warning {
+      background-color: #fcf8e3;
+      color: #8a6d3b;
+    }
+
+    .messages li.error {
+      background-color: #f2dede;
+      color: #a94442;
     }
 
     p, label {
@@ -57,6 +87,13 @@
 
 {% block content %}
 
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
   <form method="post">
     {% csrf_token %}
@@ -64,5 +101,9 @@
     <button type="submit">Logg inn</button>
   </form>
 
-  <p>Har du ikke en konto? <a href="{% url 'signup' %}">Registrer deg her</a></p>
+  <p style="text-align: center; margin-top: 15px;">
+    Har du ikke en konto?
+    <a href="{% url 'signup' %}">Registrer deg her</a>
+  </p>
+
 {% endblock %}
