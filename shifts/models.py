@@ -15,11 +15,12 @@ class Shift(models.Model):
     def __str__(self):
         return f"{self.date} - {self.time_slot}"
 class TimeSlot(models.Model):
-    label = models.CharField(_("Tidspunkt"), max_length=50, unique=True)  # e.g., "8:00–10:00"
+    label = models.CharField(_("Tidspunkt"), max_length=50)  # Remove unique=True
     is_weekend = models.BooleanField(_("Helg?"), default=False)
     order = models.PositiveIntegerField(_("Rekkefølge"), default=0)
 
     class Meta:
+        unique_together = ['label', 'is_weekend']  # Ensure uniqueness for the combination of label and is_weekend
         ordering = ['order']
         verbose_name = _("Tidsluke")
         verbose_name_plural = _("Tidsluker")
