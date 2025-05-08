@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-DEBUG = False # Change to False in production
+DEBUG = os.environ.get("DJANGO_DEBUG", "") != "False"
+
 # Get the base directory for the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,7 +33,7 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'turnusnumero13.com', 'www.turnusnume
 
 SECRET_KEY = 'django-insecure-s4+)prj7&)q=z-k@p800%dz)$7orix-hdx-uewpfdm+re9puh3'
 
-DEBUG = True  # Set to False in production
+
 if DEBUG:
     # Local development: use SQLite
     DATABASES = {
