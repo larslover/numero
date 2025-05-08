@@ -25,7 +25,6 @@ def schedule_view(request, week_offset=0):
         for i in range(5)
     ]
 
-    # ✅ Pull time slots from DB
     weekday_time_slots = TimeSlot.objects.filter(is_weekend=False)
     saturday_time_slots = TimeSlot.objects.filter(is_weekend=True)
 
@@ -33,6 +32,9 @@ def schedule_view(request, week_offset=0):
         obj.date.strftime("%Y-%m-%d"): obj.limit
         for obj in VolunteerLimit.objects.all()
     }
+
+    # Prepare this outside the loop to prevent UnboundLocalError
+    workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
 
     # Loop for weekdays (Monday to Friday)
     for i in range(5):
@@ -43,13 +45,12 @@ def schedule_view(request, week_offset=0):
             volunteers = [a.user for a in assignments if a.role == "volunteer"]
             workers = [a.user for a in assignments if a.role == "worker"]
 
-            
             logger.debug(f"Assignments for {date_str} {time_slot.label}: {assignments}")
             logger.debug(f"Workers for {date_str} {time_slot.label}: {workers}")
 
             shift_info = {
                 "date": date_str,
-                "time_slot": time_slot,  # ✅ use label for display
+                "time_slot": time_slot,
                 "users": volunteers,
                 "workers": workers,
                 "max_slots": volunteer_limits.get(date_str, 2),
@@ -67,7 +68,6 @@ def schedule_view(request, week_offset=0):
         volunteers = [a.user.username for a in assignments if a.role == "volunteer"]
         workers = [a.user for a in assignments if a.role == "worker"]
 
-
         logger.debug(f"Assignments for {saturday_str} {time_slot.label}: {assignments}")
         logger.debug(f"Workers for {saturday_str} {time_slot.label}: {workers}")
 
@@ -81,23 +81,22 @@ def schedule_view(request, week_offset=0):
 
         shifts.append(shift_info)
         shift_map[f"{saturday_str}|{time_slot.label}"] = shift_info
-        workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
 
     context = {
         "week_number": target_week.isocalendar()[1],
         "week_offset": week_offset,
         "weekdays_combined": weekdays_combined,
         "weekend_dates": [saturday_str],
-        "weekday_times": weekday_time_slots,     # 🟢 now objects
-        "saturday_times": saturday_time_slots,   # 🟢 now objects
+        "weekday_times": weekday_time_slots,
+        "saturday_times": saturday_time_slots,
         "username": request.user.username,
         "today_date": today.strftime('%A, %d %B %Y'),
         "shifts": shifts,
         "shift_map": shift_map,
         "volunteer_limits": volunteer_limits,
         "all_users": User.objects.all() if request.user.is_staff else [],
-         "workers_for_admin": workers_for_admin,  # Only workers for admin
+        "workers_for_admin": workers_for_admin,
+        "timestamp": datetime.now().timestamp(),
     }
 
-    context["timestamp"] = datetime.now().timestamp()
     return render(request, "shifts/schedule.html", context)
