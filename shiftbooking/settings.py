@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-DEBUG = os.environ.get("DJANGO_DEBUG", "") != "False"
+DEBUG = False
+
 
 # Get the base directory for the project
 BASE_DIR = Path(__file__).resolve().parent.parent
