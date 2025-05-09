@@ -3,13 +3,15 @@ from django.shortcuts import render
 from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
 from django.contrib.auth.models import User
 import logging
+from django.contrib.auth.decorators import login_required
+
 
 logger = logging.getLogger(__name__)
 
 # Pull time slots from DB
 weekday_times = TimeSlot.objects.filter(is_weekend=False)
 saturday_times = TimeSlot.objects.filter(is_weekend=True)
-
+@login_required
 def schedule_view(request, week_offset=0):
     logger.debug(f"Week Offset: {week_offset}")
 
