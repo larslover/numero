@@ -77,10 +77,9 @@ class VolunteerLimitAdmin(admin.ModelAdmin):
     search_fields = ("date",)
     list_filter = ("date",)
 
-
 # ✅ Custom User admin with approval
 class UserAdmin(admin.ModelAdmin):
-    inlines = [UserProfileInline]  # 👈 Add this line
+    inlines = [UserProfileInline]  # This is still fine
 
     list_display = ("username", "email", "is_active", "date_joined")
     list_filter = ("is_active", "date_joined")
@@ -91,13 +90,6 @@ class UserAdmin(admin.ModelAdmin):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-                send_mail(
-                    "Your account has been approved",
-                    "You can now log in to your account.",
-                    "admin@yourdomain.com",
-                    [user.email],
-                    fail_silently=False,
-                )
 
     approve_users.short_description = "Approve selected users"
 
