@@ -108,7 +108,6 @@ def get_time_slots(request):
 
 def admin_check(user):
     return user.is_staff
-
 @user_passes_test(admin_check)
 def approve_users(request):
     if request.method == "POST":
@@ -117,9 +116,10 @@ def approve_users(request):
             user = User.objects.get(id=user_id)
             user.is_active = True
             user.save()
-            messages.success(request, f"{user.username} has been approved!")
+            # ✅ No email sent
+            messages.success(request, f"{user.username} har blitt godkjent!")
         except User.DoesNotExist:
-            messages.error(request, "User not found!")
+            messages.error(request, "Bruker ble ikke funnet.")
         return redirect('approve_users')
 
     pending_users = User.objects.filter(is_active=False)
