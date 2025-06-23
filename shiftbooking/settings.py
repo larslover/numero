@@ -1,44 +1,44 @@
 import os
 from pathlib import Path
-DEBUG = False
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 # Get the base directory for the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Check if the environment is production or local
-IS_PRODUCTION = not DEBUG
+# Detect environment based on an environment variable
+DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
-# Email settings for local and production
-if IS_PRODUCTION:
-    # Use a real email backend in production
-    # Disable email sending completely
-    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+# Secret key from environment
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
-    EMAIL_HOST = 'smtp.your-email-provider.com'  # Replace with your email provider's SMTP host
-    EMAIL_PORT = 587  # Usually 587 for TLS or 465 for SSL
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = 'your-email@example.com'  # Your email username
-    EMAIL_HOST_PASSWORD = 'your-email-password'  # Your email password
-else:
-    # Use the console email backend for local development (prints to console)
+# Allowed hosts
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'turnusnumero13.com', 'www.turnusnumero13.com']
+
+# Email settings
+if DEBUG:
+    # Local development: emails printed to console
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # Production: real emails sent via Gmail (with App Password)
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
-# Other settings
+# Login/logout redirects
 LOGIN_REDIRECT_URL = "/schedule/"
 LOGOUT_REDIRECT_URL = "/login/"
 LOGIN_URL = "/login/"
-AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-]
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'turnusnumero13.com', 'www.turnusnumero13.com']
 
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
 
-SECRET_KEY = 'django-insecure-s4+)prj7&)q=z-k@p800%dz)$7orix-hdx-uewpfdm+re9puh3'
-
-
+# Database settings
 if DEBUG:
-    # Local development: use SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -46,19 +46,18 @@ if DEBUG:
         }
     }
 else:
-    # Production (PythonAnywhere): use MySQL
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'LarsLover$numero13',
-            'USER': 'LarsLover',
-            'PASSWORD': 'Simplicity',
-            'HOST': 'LarsLover.mysql.pythonanywhere-services.com',
+            'NAME': os.getenv('DB_NAME'),
+            'USER': os.getenv('DB_USER'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST'),
             'PORT': '3306',
         }
     }
 
-# Other Django settings
+# Installed apps
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -71,6 +70,7 @@ INSTALLED_APPS = [
     'rest_framework',
 ]
 
+# Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -82,6 +82,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# URLs and templates
 ROOT_URLCONF = 'shiftbooking.urls'
 
 TEMPLATES = [
@@ -102,12 +103,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'shiftbooking.wsgi.application'
 
-# Static files settings
+# Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'shifts/static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Time zone and internationalization settings
+# Time zone and internationalization
 LANGUAGE_CODE = 'nb'
 USE_I18N = True
 TIME_ZONE = 'UTC'
@@ -115,19 +116,10 @@ USE_TZ = True
 
 # Password validators
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

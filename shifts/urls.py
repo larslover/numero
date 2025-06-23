@@ -11,10 +11,17 @@ from .views.shift_actions import (
     save_shifts, get_saved_shifts, my_shifts_view
 )
 from .views.schedule import schedule_view
-
+from django.contrib.auth import views as auth_views
 from .views_admin import get_time_slots,assign_shift
 from django.urls import re_path
 urlpatterns = [
+    path('password_reset/', auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'), name='password_reset'),
+
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
+
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
+
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
     path("my-bookings/", my_bookings, name="my_bookings"),
     path('api/remove/', views_admin.remove_shift_assignment, name='remove_shift'),
     path('', RedirectView.as_view(url='/schedule/', permanent=False)),
