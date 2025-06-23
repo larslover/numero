@@ -12,7 +12,9 @@ IS_PRODUCTION = not DEBUG
 # Email settings for local and production
 if IS_PRODUCTION:
     # Use a real email backend in production
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    # Disable email sending completely
+    EMAIL_BACKEND = 'django.core.mail.backends.dummy.EmailBackend'
+
     EMAIL_HOST = 'smtp.your-email-provider.com'  # Replace with your email provider's SMTP host
     EMAIL_PORT = 587  # Usually 587 for TLS or 465 for SSL
     EMAIL_USE_TLS = True

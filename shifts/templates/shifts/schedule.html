@@ -25,6 +25,13 @@
                 <span>Velkommen, {{ username }}</span>
                 <a href="{% url 'logout' %}">Logg ut</a>
             </div>
+            <div class="my-bookings-link" style="margin-top: 5px;">
+                {% if not request.user.is_staff %}
+    <a href="{% url 'my_bookings' %}">Mine vakter</a>
+{% endif %}
+
+            </div>
+            
             <div class="navigation">
                 <a href="{% url 'schedule_week' 0 %}">← Denne uke</a> |
                 <a href="{% url 'schedule_week' week_offset|add:-1 %}">← Forrige uke</a> |

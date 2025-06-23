@@ -2,7 +2,7 @@
 from django.urls import path
 from .views_auth import custom_login, signup, custom_logout
 from .views_admin import approve_users, admin_dashboard_view, assign_worker
-from .views.schedule import schedule_view  # Import directly from the correct file
+from .views.schedule import schedule_view ,my_bookings # Import directly from the correct file
 from django.views.generic import RedirectView
 import shifts.views_admin as views_admin
 from django.urls import path, re_path
@@ -15,6 +15,7 @@ from .views.schedule import schedule_view
 from .views_admin import get_time_slots,assign_shift
 from django.urls import re_path
 urlpatterns = [
+    path("my-bookings/", my_bookings, name="my_bookings"),
     path('api/remove/', views_admin.remove_shift_assignment, name='remove_shift'),
     path('', RedirectView.as_view(url='/schedule/', permanent=False)),
     path("get-time-slots/", get_time_slots, name="get_time_slots"),

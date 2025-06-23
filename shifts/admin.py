@@ -1,23 +1,26 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
-from .models import VolunteerLimit, ShiftAssignment, TimeSlot
+from .models import VolunteerLimit, ShiftAssignment, TimeSlot, UserProfile
 from .forms import ShiftAssignmentForm
 from django.contrib.admin import SimpleListFilter
-# admin_views.py
 from django.http import JsonResponse
-from .models import TimeSlot
 import datetime
-from .models import UserProfile
 
-
+# Inline for UserProfile (unchanged)
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = "Profile"
-   
-    fields = ('role', 'bio', 'phone_number') 
+    fields = ('role', 'bio', 'phone_number')
 
+    def get_extra(self, request, obj=None, **kwargs):
+        return 0 if obj else 1
+
+    def has_add_permission(self, request, obj=None):
+        if obj is None:
+            return False
+        return not UserProfile.objects.filter(user=obj).exists()
 
 def get_time_slots(request):
     date_str = request.GET.get("date")
@@ -31,7 +34,6 @@ def get_time_slots(request):
     return JsonResponse(data, safe=False)
 
 
-
 @admin.register(ShiftAssignment)
 class ShiftAssignmentAdmin(admin.ModelAdmin):
     form = ShiftAssignmentForm
@@ -41,12 +43,11 @@ class ShiftAssignmentAdmin(admin.ModelAdmin):
     ordering = ("date", "time_slot")
 
     class Media:
-         js = ("shifts/js/time_slot_dynamic.js",)
+        js = ("shifts/js/time_slot_dynamic.js",)
 
 
-# Custom filter for filtering by weekend/weekday
 class TimeSlotWeekendFilter(SimpleListFilter):
-    title = 'Weekend Filter'  # or use _('Weekend') for translations
+    title = 'Weekend Filter'
     parameter_name = 'is_weekend'
 
     def lookups(self, request, model_admin):
@@ -62,14 +63,15 @@ class TimeSlotWeekendFilter(SimpleListFilter):
             return queryset.filter(is_weekend=False)
         return queryset
 
+
 @admin.register(TimeSlot)
 class TimeSlotAdmin(admin.ModelAdmin):
     list_display = ("label", "is_weekend", "order")
     list_editable = ("is_weekend", "order")
     ordering = ("order",)
-    list_filter = (TimeSlotWeekendFilter,)  # Add the custom filter here
+    list_filter = (TimeSlotWeekendFilter,)
 
-# ✅ Custom admin for VolunteerLimit
+
 @admin.register(VolunteerLimit)
 class VolunteerLimitAdmin(admin.ModelAdmin):
     list_display = ("date", "limit")
@@ -77,12 +79,30 @@ class VolunteerLimitAdmin(admin.ModelAdmin):
     search_fields = ("date",)
     list_filter = ("date",)
 
-# ✅ Custom User admin with approval
+
+# Custom filter to filter users by role from UserProfile
+class RoleFilter(SimpleListFilter):
+    title = 'Rolle'  # Displayed title in admin sidebar
+    parameter_name = 'role'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('worker', 'Ansatt'),
+            ('volunteer', 'Frivillig'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'worker':
+            return queryset.filter(userprofile__role='worker')
+        elif self.value() == 'volunteer':
+            return queryset.filter(userprofile__role='volunteer')
+        return queryset
+
 class UserAdmin(admin.ModelAdmin):
-    inlines = [UserProfileInline]  # This is still fine
+    inlines = [UserProfileInline]
 
     list_display = ("username", "email", "is_active", "date_joined")
-    list_filter = ("is_active", "date_joined")
+    list_filter = ("is_active", "date_joined", RoleFilter)
     actions = ["approve_users"]
 
     def approve_users(self, request, queryset):
@@ -90,10 +110,12 @@ class UserAdmin(admin.ModelAdmin):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-
     approve_users.short_description = "Approve selected users"
 
+    def has_add_permission(self, request):
+        # Return False to disable the "Add user" button for everyone
+        return False
 
-# Replace default User admin
+# Unregister default User admin and register the customized one
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

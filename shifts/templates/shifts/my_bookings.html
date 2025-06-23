@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<a href="{% url 'schedule_week' 0 %}">← Tilbake til Vaktplan</a>
+<h2>Mine Vakter</h2>
+
+{% if user_shifts %}
+<table>
+    <thead>
+        <tr>
+            <th>Dato</th>
+            <th>Ukedag</th>
+            <th>Tid</th>
+            <th>Rolle</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for shift in user_shifts %}
+        <tr>
+            <td>{{ shift.date }}</td>
+            <td>{{ shift.date|date:"l" }}</td>
+            <td>{{ shift.time_slot }}</td>
+            <td>{{ shift.role }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>Du har ingen bookede vakter.</p>
+{% endif %}
+
+{% endblock %}

@@ -4,7 +4,16 @@ from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
 from django.contrib.auth.models import User
 import logging
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.utils import timezone
 
+
+@login_required
+def my_bookings(request):
+    today = timezone.now().date()
+    user_shifts = ShiftAssignment.objects.filter(user=request.user, date__gte=today).order_by("date", "time_slot")
+    return render(request, "shifts/my_bookings.html", {"user_shifts": user_shifts})
 
 logger = logging.getLogger(__name__)
 
