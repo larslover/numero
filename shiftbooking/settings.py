@@ -105,7 +105,7 @@ WSGI_APPLICATION = 'shiftbooking.wsgi.application'
 
 # Static files
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'shifts/static']
+
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Time zone and internationalization

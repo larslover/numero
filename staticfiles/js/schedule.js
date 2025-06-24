@@ -1,103 +1,134 @@
-console.log("👋 Hello from inside schedule.js!");
+function joinShift(date, timeSlot, role, button) {
+    console.log("Joining shift:", { loggedInUser, loggedInUserId, date, timeSlot, role });
 
-// Event delegation for join/cancel buttons
-document.addEventListener("click", function (event) {
-    if (event.target.classList.contains("join-btn")) {
-        joinShift(event.target);
-    } else if (event.target.classList.contains("joined-btn")) {
-        cancelShift(event.target);
-    }
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-    console.log("Join script loaded!");
-    console.log("Logged in user:", loggedInUser);  // Log the logged-in user for debugging
-});
-
-// Function to handle "Join" action
-function joinShift(button) {
-    console.log("Join button clicked!", button); 
-
-    const date = button.dataset.date;
-    const timeSlot = button.dataset.timeSlot;
-    const role = button.dataset.role;
-
-    console.log("Join button data:", { date, time_slot: timeSlot, role, action: "join" });
-
-    fetch("/api/join/", {
-        method: "POST",
+    fetch('/en/api/join/', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
+        credentials: 'include',
         body: JSON.stringify({
+            user_id: loggedInUserId,
             date: date,
             time_slot: timeSlot,
-            role: role,
-            action: "join",
+            role: role
         })
     })
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log("Join success response:", data);
-        if (data.status === "success") {
-            button.textContent = `${data.username} | Avbryt`;
-            button.classList.remove("join-btn");
-            button.classList.add("joined-btn");
-            button.style.backgroundColor = "#dc3545";
-        } else {
-            alert("Could not join shift. Please try again.");
-        }
+        console.log('Shift joined successfully:', data);
+        button.classList.remove('volunteer-btn');
+        button.classList.add('joined-btn');
+        button.textContent = `${loggedInUser} | Avbryt`;
+        location.reload();  // ⬅️ Add this line
     })
     .catch(error => {
-        console.error("Error during join request:", error);
-        alert("There was an error while joining the shift.");
+        console.error('Join failed:', error);
     });
 }
 
-// Function to handle "Cancel" action
 function cancelShift(button) {
-    console.log("Cancel button clicked!", button); 
+    const date = button.getAttribute('data-date');
+    const timeSlot = button.getAttribute('data-time-slot');
+    const role = button.getAttribute('data-role');
 
-    const date = button.dataset.date;
-    const timeSlot = button.dataset.timeSlot;
-    const role = button.dataset.role;
-
-    console.log("Cancel button data:", { date, time_slot: timeSlot, role, action: "cancel" });
-
-    fetch("/api/join/", {
-        method: "POST",
+    fetch('/en/api/cancel/', {
+        method: 'POST',
         headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
+            user_id: loggedInUserId,
             date: date,
             time_slot: timeSlot,
-            role: role,
-            action: "cancel",
+            role: role
         })
     })
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        console.log("Cancel success response:", data);
-        if (data.status === "deleted" && data.count > 0) {
+        console.log('Shift canceled:', data);
+        if (data.status === 'success') {
+            button.classList.remove('joined-btn');
+            button.classList.add('volunteer-btn');
             button.textContent = "Bli med";
-            button.classList.remove("joined-btn");
-            button.classList.add("join-btn");
-            button.style.backgroundColor = "#28a745";
-        } else {
-            alert("Could not cancel shift. Please try again.");
+            location.reload();  // ⬅️ Add this line
         }
     })
     .catch(error => {
-        console.error("Error during cancel request:", error);
-        alert("There was an error while canceling the shift.");
+        console.error('Cancel failed:', error);
     });
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("Logged in user:", loggedInUser);
+    console.log("User ID:", loggedInUserId);
+
+    window.csrfToken = document.querySelector('[name=csrf-token]').content;
+
+    document.querySelectorAll('.volunteer-slot').forEach(slot => {
+        const date = slot.dataset.date;
+        const timeSlot = slot.dataset.timeSlot;
+        const role = "volunteer";
+        const currentUsers = slot.dataset.users ? slot.dataset.users.split(',') : [];
+        const maxSlots = parseInt(slot.dataset.maxSlots, 10);
+        const isStaff = slot.dataset.isStaff === "True";
+        const userAlreadyJoined = currentUsers.includes(loggedInUser);
+
+        slot.innerHTML = '';
+
+        currentUsers.forEach(user => {
+            if (user !== loggedInUser) {
+                const nameTag = document.createElement('div');
+                nameTag.textContent = user;
+                nameTag.className = 'joined-user';
+                slot.appendChild(nameTag);
+            }
+        });
+
+        if (isStaff) {
+            const staffTag = document.createElement('div');
+            staffTag.textContent = "Ansatt";
+            staffTag.className = 'staff-user';
+            slot.appendChild(staffTag);
+        } else {
+            if (userAlreadyJoined) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.setAttribute("data-date", date);
+                button.setAttribute("data-time-slot", timeSlot);
+                button.setAttribute("data-role", role);
+                button.setAttribute("data-id", `${date}-${timeSlot}-${loggedInUser}`);
+                button.className = "joined-btn";
+                button.textContent = `${loggedInUser} | Avbryt`;
+
+                slot.appendChild(button);
+
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    cancelShift(button);
+                });
+            } else {
+                const remainingSlots = maxSlots - currentUsers.length;
+                for (let i = 0; i < remainingSlots; i++) {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.setAttribute("data-date", date);
+                    button.setAttribute("data-time-slot", timeSlot);
+                    button.setAttribute("data-role", role);
+                    button.setAttribute("data-id", `${date}-${timeSlot}-${loggedInUser}-${i}`);
+                    button.className = "volunteer-btn";
+                    button.textContent = "Bli med";
+
+                    slot.appendChild(button);
+
+                    button.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        joinShift(date, timeSlot, role, button);
+                    });
+                }
+            }
+        }
+    });
+});
