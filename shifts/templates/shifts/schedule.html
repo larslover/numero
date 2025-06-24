@@ -8,7 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token }}">
     <meta name="username" content="{{ request.user.username }}">
     <title>Ukentlig Vaktplan</title>
-    <link rel="stylesheet" href="{% static 'shifts/css/schedule.css' %}">
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
 </head>
 
 <body>
@@ -236,9 +236,9 @@
 </script>
 
 {% if request.user.is_staff %}
-    <script src="{% static 'shifts/js/admin_schedule.js' %}"></script>
+    <script src="{% static 'js/admin_schedule.js' %}"></script>
 {% else %}
-    <script src="{% static 'shifts/js/schedule.js' %}"></script>
+    <script src="{% static 'js/schedule.js' %}"></script>
 {% endif %}
 
 </body>
