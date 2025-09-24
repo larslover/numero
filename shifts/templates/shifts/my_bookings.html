@@ -1,38 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="main-container">
+<div class="container mt-4">
 
-    <div class="top-bar">
-        <h1>Mine Vakter</h1>
-        <div class="navigation">
-            <a href="{% url 'schedule_week' 0 %}">← Tilbake til Vaktplan</a>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3">Mine Vakter</h1>
+        <a href="{% url 'schedule_week' 0 %}" class="btn btn-secondary btn-sm">← Tilbake til Vaktplan</a>
     </div>
 
     {% if user_shifts %}
-    <table>
-        <thead>
-            <tr>
-                <th>Dato</th>
-                <th>Ukedag</th>
-                <th>Tid</th>
-                <th>Rolle</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for shift in user_shifts %}
-            <tr>
-                <td>{{ shift.date }}</td>
-                <td>{{ shift.date|date:"l" }}</td>
-                <td>{{ shift.time_slot }}</td>
-                <td>{{ shift.role }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Dato</th>
+                    <th>Ukedag</th>
+                    <th>Tid</th>
+                    <th>Rolle</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in user_shifts %}
+                <tr>
+                    <td>{{ shift.date|date:"d/m/Y" }}</td>
+                    <td>{{ shift.date|date:"l" }}</td>
+                    <td>{{ shift.time_slot }}</td>
+                    <td>{{ shift.role }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
-    <p>Du har ingen bookede vakter.</p>
+    <div class="alert alert-info mt-3" role="alert">
+        Du har ingen bookede vakter.
+    </div>
     {% endif %}
 
 </div>

@@ -12,7 +12,8 @@ from django.utils import timezone
 @login_required
 def my_bookings(request):
     today = timezone.now().date()
-    user_shifts = ShiftAssignment.objects.filter(user=request.user, date__gte=today).order_by("date", "time_slot")
+    user_shifts = ShiftAssignment.objects.filter(user=request.user).order_by("date", "time_slot")
+
     return render(request, "shifts/my_bookings.html", {"user_shifts": user_shifts})
 
 logger = logging.getLogger(__name__)
