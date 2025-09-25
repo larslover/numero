@@ -8,10 +8,12 @@
         <a href="{% url 'schedule_week' 0 %}" class="btn btn-secondary btn-sm">← Tilbake til Vaktplan</a>
     </div>
 
-    {% if user_shifts %}
-    <div class="table-responsive">
+    {# Upcoming shifts #}
+    <h3 class="mt-4">Kommende vakter</h3>
+    {% if upcoming_shifts %}
+    <div class="table-responsive mb-4">
         <table class="table table-striped table-bordered align-middle">
-            <thead class="table-dark">
+            <thead class="table-success">
                 <tr>
                     <th>Dato</th>
                     <th>Ukedag</th>
@@ -20,7 +22,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for shift in user_shifts %}
+                {% for shift in upcoming_shifts %}
                 <tr>
                     <td>{{ shift.date|date:"d/m/Y" }}</td>
                     <td>{{ shift.date|date:"l" }}</td>
@@ -32,10 +34,40 @@
         </table>
     </div>
     {% else %}
-    <div class="alert alert-info mt-3" role="alert">
-        Du har ingen bookede vakter.
-    </div>
+    <div class="alert alert-info">Ingen kommende vakter.</div>
     {% endif %}
+
+    {# Past shifts collapsed #}
+    <h3 class="mt-4">Tidligere vakter</h3>
+    <details>
+        <summary class="mb-2">Vis tidligere vakter</summary>
+        {% if past_shifts %}
+        <div class="table-responsive mt-2">
+            <table class="table table-striped table-bordered align-middle">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Dato</th>
+                        <th>Ukedag</th>
+                        <th>Tid</th>
+                        <th>Rolle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in past_shifts %}
+                    <tr>
+                        <td>{{ shift.date|date:"d/m/Y" }}</td>
+                        <td>{{ shift.date|date:"l" }}</td>
+                        <td>{{ shift.time_slot }}</td>
+                        <td>{{ shift.role }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary">Ingen tidligere vakter.</div>
+        {% endif %}
+    </details>
 
 </div>
 {% endblock %}

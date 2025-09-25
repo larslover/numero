@@ -1,6 +1,4 @@
 function joinShift(date, timeSlot, role, button) {
-    console.log("Joining shift:", { loggedInUser, loggedInUserId, date, timeSlot, role });
-
     fetch('/en/api/join/', {
         method: 'POST',
         headers: {
@@ -20,18 +18,15 @@ function joinShift(date, timeSlot, role, button) {
         console.log('Shift joined successfully:', data);
         button.classList.remove('volunteer-btn');
         button.classList.add('joined-btn');
-        button.textContent = `${loggedInUser} | Avbryt`;
-        location.reload();  // ⬅️ Add this line
+        button.textContent = 'Avbryt';
     })
-    .catch(error => {
-        console.error('Join failed:', error);
-    });
+    .catch(error => console.error('Join failed:', error));
 }
 
 function cancelShift(button) {
-    const date = button.getAttribute('data-date');
-    const timeSlot = button.getAttribute('data-time-slot');
-    const role = button.getAttribute('data-role');
+    const date = button.dataset.date;
+    const timeSlot = button.dataset.timeSlot;
+    const role = button.dataset.role;
 
     fetch('/en/api/cancel/', {
         method: 'POST',
@@ -52,83 +47,86 @@ function cancelShift(button) {
         if (data.status === 'success') {
             button.classList.remove('joined-btn');
             button.classList.add('volunteer-btn');
-            button.textContent = "Bli med";
-            location.reload();  // ⬅️ Add this line
+            button.textContent = 'Bli med';
         }
     })
-    .catch(error => {
-        console.error('Cancel failed:', error);
-    });
+    .catch(error => console.error('Cancel failed:', error));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Logged in user:", loggedInUser);
-    console.log("User ID:", loggedInUserId);
+    const csrfToken = document.querySelector('[name=csrf-token]').content;
+    const loggedInUser = "{{ request.user.username|escapejs }}";
+    const loggedInUserId = "{{ request.user.id }}";
 
-    window.csrfToken = document.querySelector('[name=csrf-token]').content;
+    function joinShift(date, timeSlot, role, button) {
+        fetch('/en/api/join/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            credentials: 'include',
+            body: JSON.stringify({ user_id: loggedInUserId, date: date, time_slot: timeSlot, role: role })
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.classList.remove('volunteer-btn');
+            button.classList.add('joined-btn');
+            button.textContent = 'Avbryt';
+        })
+        .catch(err => console.error(err));
+    }
+
+    function cancelShift(button) {
+        const date = button.dataset.date;
+        const timeSlot = button.dataset.timeSlot;
+        const role = button.dataset.role;
+
+        fetch('/en/api/cancel/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify({ user_id: loggedInUserId, date: date, time_slot: timeSlot, role: role })
+        })
+        .then(res => res.json())
+        .then(data => {
+            button.classList.remove('joined-btn');
+            button.classList.add('volunteer-btn');
+            button.textContent = 'Bli med';
+        })
+        .catch(err => console.error(err));
+    }
 
     document.querySelectorAll('.volunteer-slot').forEach(slot => {
         const date = slot.dataset.date;
         const timeSlot = slot.dataset.timeSlot;
-        const role = "volunteer";
+        const role = slot.dataset.role;
         const currentUsers = slot.dataset.users ? slot.dataset.users.split(',') : [];
-        const maxSlots = parseInt(slot.dataset.maxSlots, 10);
-        const isStaff = slot.dataset.isStaff === "True";
-        const userAlreadyJoined = currentUsers.includes(loggedInUser);
+        const userAlreadyJoined = slot.dataset.userJoined === 'true';
 
-        slot.innerHTML = '';
+        slot.textContent = '';
 
+        // Show other users
         currentUsers.forEach(user => {
-            if (user !== loggedInUser) {
-                const nameTag = document.createElement('div');
-                nameTag.textContent = user;
-                nameTag.className = 'joined-user';
-                slot.appendChild(nameTag);
-            }
+            const div = document.createElement('div');
+            div.className = 'joined-user';
+            div.textContent = user;
+            slot.appendChild(div);
         });
 
-        if (isStaff) {
-            const staffTag = document.createElement('div');
-            staffTag.textContent = "Ansatt";
-            staffTag.className = 'staff-user';
-            slot.appendChild(staffTag);
+        // Add one button per slot
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.date = date;
+        button.dataset.timeSlot = timeSlot;
+        button.dataset.role = role;
+
+        if (userAlreadyJoined) {
+            button.className = 'joined-btn';
+            button.textContent = 'Avbryt';
+            button.addEventListener('click', e => { e.preventDefault(); cancelShift(button); });
         } else {
-            if (userAlreadyJoined) {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.setAttribute("data-date", date);
-                button.setAttribute("data-time-slot", timeSlot);
-                button.setAttribute("data-role", role);
-                button.setAttribute("data-id", `${date}-${timeSlot}-${loggedInUser}`);
-                button.className = "joined-btn";
-                button.textContent = `${loggedInUser} | Avbryt`;
-
-                slot.appendChild(button);
-
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    cancelShift(button);
-                });
-            } else {
-                const remainingSlots = maxSlots - currentUsers.length;
-                for (let i = 0; i < remainingSlots; i++) {
-                    const button = document.createElement("button");
-                    button.type = "button";
-                    button.setAttribute("data-date", date);
-                    button.setAttribute("data-time-slot", timeSlot);
-                    button.setAttribute("data-role", role);
-                    button.setAttribute("data-id", `${date}-${timeSlot}-${loggedInUser}-${i}`);
-                    button.className = "volunteer-btn";
-                    button.textContent = "Bli med";
-
-                    slot.appendChild(button);
-
-                    button.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        joinShift(date, timeSlot, role, button);
-                    });
-                }
-            }
+            button.className = 'volunteer-btn';
+            button.textContent = 'Bli med';
+            button.addEventListener('click', e => { e.preventDefault(); joinShift(date, timeSlot, role, button); });
         }
+
+        slot.appendChild(button);
     });
 });

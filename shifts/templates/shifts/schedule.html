@@ -6,7 +6,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <meta name="username" content="{{ request.user.username }}">
     <title>Ukentlig Vaktplan</title>
     <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
 </head>
@@ -25,13 +24,11 @@
                 <span>Velkommen, {{ username }}</span>
                 <a href="{% url 'logout' %}">Logg ut</a>
             </div>
+            {% if not request.user.is_staff %}
             <div class="my-bookings-link" style="margin-top: 5px;">
-                {% if not request.user.is_staff %}
-    <a href="{% url 'my_bookings' %}">Mine vakter</a>
-{% endif %}
-
+                <a href="{% url 'my_bookings' %}">Mine vakter</a>
             </div>
-            
+            {% endif %}
             <div class="navigation">
                 <a href="{% url 'schedule_week' 0 %}">← Denne uke</a> |
                 <a href="{% url 'schedule_week' week_offset|add:-1 %}">← Forrige uke</a> |
@@ -39,57 +36,47 @@
             </div>
             {% if request.user.is_staff %}
             <div style="margin-top: 10px;">
-                <a href="/en/admin/" class="admin-back-btn">
-                    <span class="arrow-left"></span> Tilbake til Admin
-                </a>
+                <a href="/en/admin/" class="admin-back-btn">← Tilbake til Admin</a>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Layout container: list on the left, tables on the right -->
+    <!-- Layout container -->
     <div class="content-layout" style="display: flex; gap: 20px; align-items: flex-start;">
 
         {% if request.user.is_staff %}
-        <!-- Worker list on the left for admins -->
         <aside class="sidebar">
             <h3>Alle Ansatte</h3>
             <ul id="worker-list">
                 {% for user in workers_for_admin %}
-                <li id="worker-{{ user.id }}"
-                class="worker"
-                draggable="true"
-                data-username="{{ user.username }}"
-                data-userid="{{ user.id }}">
-                {{ user.username }}
-            </li>
-            
+                <li id="worker-{{ user.id }}" class="worker" draggable="true"
+                    data-username="{{ user.username }}" data-userid="{{ user.id }}">
+                    {{ user.username }}
+                </li>
                 {% endfor %}
             </ul>
             <div id="trash-bin" ondragover="event.preventDefault()" ondrop="handleTrashDrop(event)">
-                🗑️ Drag here to remove
-              </div>
-              
+                🗑️ Drag here to fjerne
+            </div>
         </aside>
         {% endif %}
 
-        <!-- Tables always visible -->
         <div class="tables-container" style="flex: 1;">
 
             <!-- WEEKDAY TABLE -->
-           
             <table border="1">
                 <thead>
                     <tr>
                         <th rowspan="2">Tid</th>
                         {% for weekday, date in weekdays_combined %}
-                            <th colspan="2">{{ weekday|translate_weekday }}<br><small>{{ date }}</small></th>
+                        <th colspan="2">{{ weekday|translate_weekday }}<br><small>{{ date }}</small></th>
                         {% endfor %}
                     </tr>
                     <tr>
                         {% for weekday, date in weekdays_combined %}
-                            <th>Ansatt</th>
-                            <th>Frivillig</th>
+                        <th>Ansatt</th>
+                        <th>Frivillig</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -100,66 +87,63 @@
                         {% for weekday, date in weekdays_combined %}
                             {% get_shift shifts date time as shift %}
 
-                         
-                                                       <!-- Worker -->
-<td class="worker-drop-target"
-    id="slot-{{ date }}-{{ time.label }}-worker"
-    data-date="{{ date }}"
-    data-time-slot="{{ time.label }}"
-    data-timeslotid="{{ time.id }}">
-    
-    {% if request.user.is_staff %}
-    <div class="worker-drop-zone">
-
-    {% endif %}
-    
-    {% if shift and shift.workers %}
-        {% for worker in shift.workers %}
-            <div class="worker-name"
-                 id="worker-{{ worker.id }}"
-                 data-userid="{{ worker.id }}"
-                 data-username="{{ worker.name }}"
-                 data-date="{{ date }}"
-                 data-timeslot="{{ time.label }}"
-                 data-timeslotid="{{ time.id }}"
-                 draggable="true">
-                {{ worker }}
-            </div>
-        {% endfor %}
-    {% endif %}
-</td>
-
-
-                            <!-- Volunteer -->
-                            <td class="volunteer-slot"
+                            <!-- Worker -->
+                            <td class="worker-drop-target"
+                                id="slot-{{ date }}-{{ time.label }}-worker"
                                 data-date="{{ date }}"
                                 data-time-slot="{{ time.label }}"
-                                data-users="{{ shift.users|join:',' }}"
-                                data-max-slots="{{ shift.max_slots }}"
-                                data-role="volunteer">
-                                <!-- JS will insert buttons and names here -->
+                                data-timeslotid="{{ time.id }}">
+                                {% if request.user.is_staff %}
+                                <div class="worker-drop-zone">{% endif %}
+
+                                {% if shift and shift.workers %}
+                                    {% for worker in shift.workers %}
+                                    <div class="worker-name"
+                                         id="worker-{{ worker.id }}"
+                                         draggable="true"
+                                         data-userid="{{ worker.id }}"
+                                         data-username="{{ worker.username }}"
+                                         data-date="{{ date }}"
+                                         data-timeslot="{{ time.label }}"
+                                         data-timeslotid="{{ time.id }}">
+                                        {{ worker.username }}
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                {% if request.user.is_staff %}
+                                </div>{% endif %}
                             </td>
+
+                            <td class="volunteer-slot"
+                            data-date="{{ date }}"
+                            data-time-slot="{{ time.label }}"
+                            data-users="{{ shift.users|join:',' }}"
+                            data-user-joined="{% if username in shift.users %}true{% else %}false{% endif %}"
+                            data-max-slots="{{ shift.max_slots }}"
+                            data-role="volunteer">
+                            <!-- JS generates button text: Bli med / Avbryt -->
+                        </td>
+                        
                         {% endfor %}
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-          
-            
+
             <!-- SATURDAY TABLE -->
-          
             <table border="1">
                 <thead>
                     <tr>
                         <th rowspan="2">Tid</th>
                         {% for date in weekend_dates %}
-                            <th colspan="2">Lørdag<br><small>{{ date }}</small></th>
+                        <th colspan="2">Lørdag<br><small>{{ date }}</small></th>
                         {% endfor %}
                     </tr>
                     <tr>
                         {% for date in weekend_dates %}
-                            <th>Ansatt</th>
-                            <th>Frivillig</th>
+                        <th>Ansatt</th>
+                        <th>Frivillig</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -169,55 +153,45 @@
                         <td>{{ time.label }}</td>
                         {% for date in weekend_dates %}
                             {% get_shift shifts date time as shift %}
-                      
 
-
-                           <!-- Worker -->
-                           <td class="worker-drop-target"
-                           id="slot-{{ date }}-{{ time.label }}-worker"
-                           data-date="{{ date }}"
-                           data-time-slot="{{ time.label }}"
-                           data-timeslotid="{{ time.id }}">
-                           
-                           {% if request.user.is_staff %}
-                           <div class="worker-drop-zone">
-                           {% endif %}
-                       
-                           {% if shift and shift.workers %}
-                               {% for worker in shift.workers %}
-                               
-                               <div class="worker-name"
-                               id="worker-{{ worker.id }}"
-                               draggable="true"
-                               ondragstart="drag(event)"
-                               data-userid="{{ worker.id }}"
-                               data-username="{{ worker.name }}"
-                               data-date="{{ date }}"
-                               data-timeslot="{{ time.label }}"
-                               data-timeslotid="{{ time.id }}">
-                              {{ worker }}
-                          </div>
-                          
-                               {% endfor %}
-                           {% endif %}
-                       
-                           {% if request.user.is_staff %}
-                           </div>
-                           
-                           {% endif %}
-                       </td>
-                       
-                        
-
-                            <!-- Volunteer -->
-                            <td class="volunteer-slot"
+                            <!-- Worker -->
+                            <td class="worker-drop-target"
+                                id="slot-{{ date }}-{{ time.label }}-worker"
                                 data-date="{{ date }}"
                                 data-time-slot="{{ time.label }}"
-                                data-users="{{ shift.users|join:',' }}"
-                                data-max-slots="{{ shift.max_slots }}"
-                                data-role="volunteer">
-                                <!-- JS will insert buttons and names here -->
+                                data-timeslotid="{{ time.id }}">
+                                {% if request.user.is_staff %}
+                                <div class="worker-drop-zone">{% endif %}
+
+                                {% if shift and shift.workers %}
+                                    {% for worker in shift.workers %}
+                                    <div class="worker-name"
+                                         id="worker-{{ worker.id }}"
+                                         draggable="true"
+                                         data-userid="{{ worker.id }}"
+                                         data-username="{{ worker.username }}"
+                                         data-date="{{ date }}"
+                                         data-timeslot="{{ time.label }}"
+                                         data-timeslotid="{{ time.id }}">
+                                        {{ worker.username }}
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+
+                                {% if request.user.is_staff %}
+                                </div>{% endif %}
                             </td>
+
+                            <td class="volunteer-slot"
+                            data-date="{{ date }}"
+                            data-time-slot="{{ time.label }}"
+                            data-users="{{ shift.users|join:',' }}"
+                            data-user-joined="{% if username in shift.users %}true{% else %}false{% endif %}"
+                            data-max-slots="{{ shift.max_slots }}"
+                            data-role="volunteer">
+                            <!-- JS generates button text: Bli med / Avbryt -->
+                        </td>
+                        
                         {% endfor %}
                     </tr>
                     {% endfor %}
@@ -228,7 +202,6 @@
     </div>
 </div>
 
-<!-- Scripts -->
 <script>
     const loggedInUser = "{{ request.user.username|default:''|escapejs }}";
     const loggedInUserId = "{{ request.user.id|default:'null' }}";
@@ -236,9 +209,9 @@
 </script>
 
 {% if request.user.is_staff %}
-    <script src="{% static 'js/admin_schedule.js' %}"></script>
+<script src="{% static 'js/admin_schedule.js' %}"></script>
 {% else %}
-    <script src="{% static 'js/schedule.js' %}"></script>
+<script src="{% static 'js/schedule.js' %}"></script>
 {% endif %}
 
 </body>
