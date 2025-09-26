@@ -8,18 +8,41 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.utils import timezone
 
+import logging
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.shortcuts import render
+from shifts.models import ShiftAssignment, TimeSlot
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def my_bookings(request):
     today = timezone.now().date()
-    user_shifts = ShiftAssignment.objects.filter(user=request.user, date__gte=today).order_by("date", "time_slot")
-    return render(request, "shifts/my_bookings.html", {"user_shifts": user_shifts})
+    filter_option = request.GET.get("filter", "upcoming")
 
-logger = logging.getLogger(__name__)
+    # Base queryset
+    user_shifts = ShiftAssignment.objects.filter(user=request.user)
 
-# Pull time slots from DB
-weekday_times = TimeSlot.objects.filter(is_weekend=False)
-saturday_times = TimeSlot.objects.filter(is_weekend=True)
+    # Apply filters
+    if filter_option == "upcoming":
+        user_shifts = user_shifts.filter(date__gte=today).order_by("date", "time_slot")
+    elif filter_option == "past":
+        user_shifts = user_shifts.filter(date__lt=today).order_by("-date", "-time_slot")
+    else:  # "all"
+        user_shifts = user_shifts.order_by("date", "time_slot")
+
+    # Pull time slots from DB
+    weekday_times = TimeSlot.objects.filter(is_weekend=False)
+    saturday_times = TimeSlot.objects.filter(is_weekend=True)
+
+    context = {
+        "user_shifts": user_shifts,
+        "weekday_times": weekday_times,
+        "saturday_times": saturday_times,
+    }
+    return render(request, "shifts/my_bookings.html", context)
+
 @login_required
 def schedule_view(request, week_offset=0):
     logger.debug(f"Week Offset: {week_offset}")

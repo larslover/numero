@@ -1,38 +1,77 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<div class="main-container">
+{% block extra_head %}
+  <!-- Include Bootstrap CSS (if not already included in base.html) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
 
-    <div class="top-bar">
+{% block content %}
+<div class="container my-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h1>Mine Vakter</h1>
-        <div class="navigation">
-            <a href="{% url 'schedule_week' 0 %}">← Tilbake til Vaktplan</a>
-        </div>
+        <a href="{% url 'schedule_week' 0 %}" class="btn btn-outline-secondary">← Tilbake til Vaktplan</a>
+    </div>
+
+    <!-- Filter controls -->
+    <div class="mb-3">
+        <form method="get" class="d-flex gap-2 flex-wrap">
+            <button type="submit" name="filter" value="upcoming"
+                    class="btn {% if request.GET.filter == 'upcoming' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Kommende vakter
+            </button>
+            <button type="submit" name="filter" value="past"
+                    class="btn {% if request.GET.filter == 'past' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Tidligere vakter
+            </button>
+            <button type="submit" name="filter" value="all"
+                    class="btn {% if request.GET.filter == 'all' or not request.GET.filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Alle vakter
+            </button>
+        </form>
     </div>
 
     {% if user_shifts %}
-    <table>
-        <thead>
-            <tr>
-                <th>Dato</th>
-                <th>Ukedag</th>
-                <th>Tid</th>
-                <th>Rolle</th>
-            </tr>
-        </thead>
-        <tbody>
+    <!-- Desktop table -->
+    <div class="table-responsive d-none d-md-block">
+        <table class="table table-striped table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Dato</th>
+                    <th>Ukedag</th>
+                    <th>Tid</th>
+                    <th>Rolle</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for shift in user_shifts %}
+                <tr>
+                    <td>{{ shift.date }}</td>
+                    <td>{{ shift.date|date:"l" }}</td>
+                    <td>{{ shift.time_slot }}</td>
+                    <td>{{ shift.role }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="d-block d-md-none">
         {% for shift in user_shifts %}
-            <tr>
-                <td>{{ shift.date }}</td>
-                <td>{{ shift.date|date:"l" }}</td>
-                <td>{{ shift.time_slot }}</td>
-                <td>{{ shift.role }}</td>
-            </tr>
+        <div class="card mb-2">
+            <div class="card-body">
+                <p><strong>Dato:</strong> {{ shift.date }}</p>
+                <p><strong>Ukedag:</strong> {{ shift.date|date:"l" }}</p>
+                <p><strong>Tid:</strong> {{ shift.time_slot }}</p>
+                <p><strong>Rolle:</strong> {{ shift.role }}</p>
+            </div>
+        </div>
         {% endfor %}
-        </tbody>
-    </table>
+    </div>
+
     {% else %}
-    <p>Du har ingen bookede vakter.</p>
+    <p class="text-center">Du har ingen bookede vakter.</p>
     {% endif %}
 
 </div>
