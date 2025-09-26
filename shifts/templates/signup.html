@@ -89,25 +89,49 @@
 
   <form method="post">
     {% csrf_token %}
+  
+    {% if form.non_field_errors %}
+      <div style="color: red; margin-bottom: 10px;">
+        {% for error in form.non_field_errors %}
+          <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  
     <div>
       <label for="{{ form.username.id_for_label }}">Brukernavn</label>
       {{ form.username }}
+      {% for error in form.username.errors %}
+        <p style="color:red;">{{ error }}</p>
+      {% endfor %}
     </div>
+  
     <div>
       <label for="{{ form.email.id_for_label }}">E-post</label>
       {{ form.email }}
+      {% for error in form.email.errors %}
+        <p style="color:red;">{{ error }}</p>
+      {% endfor %}
     </div>
+  
     <div>
       <label for="{{ form.password1.id_for_label }}">Passord</label>
       {{ form.password1 }}
+      {% for error in form.password1.errors %}
+        <p style="color:red;">{{ error }}</p>
+      {% endfor %}
     </div>
+  
     <div>
       <label for="{{ form.password2.id_for_label }}">Gjenta passord</label>
       {{ form.password2 }}
+      {% for error in form.password2.errors %}
+        <p style="color:red;">{{ error }}</p>
+      {% endfor %}
     </div>
-
+  
     <button type="submit">Registrer</button>
   </form>
-
+  
   <p>Har du allerede en konto? <a href="{% url 'login' %}">Logg inn her</a></p>
 {% endblock %}
