@@ -1,0 +1,112 @@
+{% load shift_extras %}
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Vaktplan PDF - Uke {{ week_number }}</title>
+    <style>
+        body { font-family: sans-serif; font-size: 12px; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 5px; text-align: left; }
+        th { background-color: #f0f0f0; }
+        h2 { text-align: center; }
+        .header-day { font-weight: bold; }
+        .header-date { font-size: smaller; }
+    </style>
+</head>
+<body>
+    <h2>Vaktplan - Uke {{ week_number }}</h2>
+    <p><strong>I dag:</strong> {{ today_date }}</p>
+
+    <!-- Weekday Table -->
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Tid</th>
+                {% for weekday, date in weekdays_combined %}
+                    <th colspan="2">
+                        <div class="header-day">{{ weekday|translate_weekday }}</div>
+                        <div class="header-date">{{ date }}</div>
+                    </th>
+                {% endfor %}
+            </tr>
+            <tr>
+                {% for weekday, date in weekdays_combined %}
+                    <th>Ansatt</th>
+                    <th>Frivillig</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for time in weekday_times %}
+            <tr>
+                <td>{{ time.label }}</td>
+                {% for weekday, date in weekdays_combined %}
+                    {% get_shift shifts date time as shift %}
+                    <td>
+                        {% if shift.workers %}
+                            {% for worker in shift.workers %}
+                                {{ worker.username }}<br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if shift.volunteers %}
+                            {% for vol in shift.volunteers %}
+                                {{ vol.username }}<br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Saturday Table -->
+    <table>
+        <thead>
+            <tr>
+                <th rowspan="2">Tid</th>
+                {% for date in weekend_dates %}
+                    <th colspan="2">
+                        <div class="header-day">Lørdag</div>
+                        <div class="header-date">{{ date }}</div>
+                    </th>
+                {% endfor %}
+            </tr>
+            <tr>
+                {% for date in weekend_dates %}
+                    <th>Ansatt</th>
+                    <th>Frivillig</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for time in saturday_times %}
+            <tr>
+                <td>{{ time.label }}</td>
+                {% for date in weekend_dates %}
+                    {% get_shift shifts date time as shift %}
+                    <td>
+                        {% if shift.workers %}
+                            {% for worker in shift.workers %}
+                                {{ worker.username }}<br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if shift.volunteers %}
+                            {% for vol in shift.volunteers %}
+                                {{ vol.username }}<br>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

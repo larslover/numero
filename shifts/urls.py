@@ -3,6 +3,7 @@ from django.urls import path
 from .views_auth import custom_login, signup, custom_logout
 from .views_admin import approve_users, admin_dashboard_view, assign_worker
 from .views.schedule import schedule_view ,my_bookings # Import directly from the correct file
+
 from django.views.generic import RedirectView
 import shifts.views_admin as views_admin
 from django.urls import path, re_path
@@ -14,8 +15,15 @@ from .views.schedule import schedule_view
 from django.contrib.auth import views as auth_views
 from .views_admin import get_time_slots,assign_shift
 from django.urls import re_path
+from .views.schedule import schedule_pdf_view
+
 urlpatterns = [
+   path('schedule/pdf/<int:week_offset>/', schedule_pdf_view, name='schedule_pdf'),
+  
+
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'), name='password_reset'),
+    
+
 
     path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
 

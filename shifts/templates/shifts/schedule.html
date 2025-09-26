@@ -29,6 +29,10 @@
                 {% if not request.user.is_staff %}
     <a href="{% url 'my_bookings' %}">Mine vakter</a>
 {% endif %}
+<form method="get" action="{% url 'schedule_pdf' week_offset %}" style="display:inline;">
+    <button type="submit">📄 Last ned PDF</button>
+</form>
+
 
             </div>
             
