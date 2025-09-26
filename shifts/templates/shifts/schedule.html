@@ -35,13 +35,18 @@
                 <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Logg ut</a>
             </div>
 
-            <!-- My Bookings / PDF -->
-            <div class="my-bookings-link d-flex align-items-center gap-2">
-                {% if not request.user.is_staff %}
-                    <a href="{% url 'my_bookings' %}" class="btn btn-primary btn-sm">Mine vakter</a>
-                {% endif %}
-               
-            </div>
+           <!-- My Bookings / PDF -->
+<div class="my-bookings-link d-flex align-items-center gap-2">
+    {% if not request.user.is_staff %}
+        <a href="{% url 'my_bookings' %}" class="btn btn-primary btn-sm">Mine vakter</a>
+    {% endif %}
+    
+    <!-- PDF button -->
+    <form method="get" action="{% url 'schedule_pdf' week_offset %}" class="d-inline">
+        <button type="submit" class="btn btn-success btn-sm">📄 Last ned PDF</button>
+    </form>
+</div>
+
 <!-- Navigation buttons -->
 <div class="navigation d-flex gap-1 flex-wrap">
     <a href="{% url 'schedule_week' 0 %}" class="btn btn-outline-primary btn-sm">← Denne uke</a>
