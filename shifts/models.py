@@ -40,27 +40,41 @@ class VolunteerLimit(models.Model):
     def __str__(self):
         return f"{self.date} - {self.limit} frivillige"
 
+from django.core.exceptions import ValidationError
 
 class ShiftAssignment(models.Model):
     ROLE_CHOICES = [
-        ('worker', _("Ansatt")),
-        ('volunteer', _("Frivillig")),
+        ('worker', "Ansatt"),
+        ('volunteer', "Frivillig"),
     ]
 
-    user = models.ForeignKey(User, verbose_name=_("Bruker"), on_delete=models.CASCADE)
-    date = models.DateField(_("Dato"))
-    time_slot = models.ForeignKey(TimeSlot, verbose_name=_("Tidsluke"), on_delete=models.CASCADE)
-    role = models.CharField(_("Rolle"), max_length=10, choices=ROLE_CHOICES)
+    user = models.ForeignKey(User, verbose_name="Bruker", on_delete=models.CASCADE)
+    date = models.DateField("Dato")
+    time_slot = models.ForeignKey(TimeSlot, verbose_name="Tidsluke", on_delete=models.CASCADE)
+    role = models.CharField("Rolle", max_length=10, choices=ROLE_CHOICES)
 
     class Meta:
         unique_together = ('user', 'date', 'time_slot', 'role')
-        verbose_name = _("Vakt")
-        verbose_name_plural = _("Vakter")
+
+    def clean(self):
+        # Check for double booking
+        other_role = 'volunteer' if self.role == 'worker' else 'worker'
+        exists = ShiftAssignment.objects.filter(
+            user=self.user,
+            date=self.date,
+            time_slot=self.time_slot,
+            role=other_role
+        ).exists()
+
+        if exists:
+            raise ValidationError(f"{self.user.username} is already assigned as {other_role} for this slot.")
+
+    def save(self, *args, **kwargs):
+        self.clean()  # enforce validation
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.user.username} som {self.get_role_display()} {self.date} kl. {self.time_slot}"
-
-
 
 class UserProfile(models.Model):
     ROLE_CHOICES = [
