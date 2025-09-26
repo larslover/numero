@@ -71,45 +71,42 @@ def schedule_view(request, week_offset=0):
     workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
 
     # Loop for weekdays (Monday to Friday)
+    # Weekdays (Monday to Friday)
+# Weekdays (Monday to Friday)
     for i in range(5):
         date = start_of_week + timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
         for time_slot in weekday_time_slots:
             assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
-            volunteers = [a.user for a in assignments if a.role == "volunteer"]
             workers = [a.user for a in assignments if a.role == "worker"]
-
-            logger.debug(f"Assignments for {date_str} {time_slot.label}: {assignments}")
-            logger.debug(f"Workers for {date_str} {time_slot.label}: {workers}")
+            volunteers = [a.user for a in assignments if a.role == "volunteer"]  # <-- keep as User objects
 
             shift_info = {
                 "date": date_str,
                 "time_slot": time_slot,
-                "users": volunteers,
                 "workers": workers,
+                "volunteers": volunteers,  # <-- pass User objects
+                "users": [u.username for u in volunteers],  # for JS if needed
                 "max_slots": volunteer_limits.get(date_str, 2),
             }
 
             shifts.append(shift_info)
             shift_map[f"{date_str}|{time_slot.label}"] = shift_info
 
-    # Loop for Saturday
+    # Saturday
     saturday_date = start_of_week + timedelta(days=5)
     saturday_str = saturday_date.strftime("%Y-%m-%d")
-
     for time_slot in saturday_time_slots:
         assignments = ShiftAssignment.objects.filter(date=saturday_date, time_slot=time_slot)
-        volunteers = [a.user.username for a in assignments if a.role == "volunteer"]
         workers = [a.user for a in assignments if a.role == "worker"]
-
-        logger.debug(f"Assignments for {saturday_str} {time_slot.label}: {assignments}")
-        logger.debug(f"Workers for {saturday_str} {time_slot.label}: {workers}")
+        volunteers = [a.user for a in assignments if a.role == "volunteer"]  # <-- keep as User objects
 
         shift_info = {
             "date": saturday_str,
             "time_slot": time_slot,
-            "users": volunteers,
             "workers": workers,
+            "volunteers": volunteers,
+            "users": [u.username for u in volunteers],  # for JS
             "max_slots": volunteer_limits.get(saturday_str, 2),
         }
 

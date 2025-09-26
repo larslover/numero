@@ -130,15 +130,27 @@
 </td>
 
 
-                            <!-- Volunteer -->
-                            <td class="volunteer-slot"
-                                data-date="{{ date }}"
-                                data-time-slot="{{ time.label }}"
-                                data-users="{{ shift.users|join:',' }}"
-                                data-max-slots="{{ shift.max_slots }}"
-                                data-role="volunteer">
-                                <!-- JS will insert buttons and names here -->
-                            </td>
+                           <!-- Volunteer -->
+<td class="volunteer-slot"
+data-date="{{ date }}"
+data-time-slot="{{ time.label }}"
+data-users="{{ shift.users|join:',' }}"
+data-max-slots="{{ shift.max_slots }}"
+data-role="volunteer">
+
+<!-- Show already assigned volunteers (read-only for admin) -->
+{% if request.user.is_staff and shift and shift.users %}
+    {% for vol in shift.users %}
+        <div class="volunteer-name"
+             style="opacity:0.6; font-style:italic;"
+             title="Frivillig – ikke redigerbar">
+            {{ vol }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+</td>
+
                         {% endfor %}
                     </tr>
                     {% endfor %}
@@ -209,15 +221,27 @@
                        
                         
 
-                            <!-- Volunteer -->
-                            <td class="volunteer-slot"
-                                data-date="{{ date }}"
-                                data-time-slot="{{ time.label }}"
-                                data-users="{{ shift.users|join:',' }}"
-                                data-max-slots="{{ shift.max_slots }}"
-                                data-role="volunteer">
-                                <!-- JS will insert buttons and names here -->
-                            </td>
+                           <!-- Volunteer -->
+<td class="volunteer-slot"
+data-date="{{ date }}"
+data-time-slot="{{ time.label }}"
+data-users="{{ shift.users|join:',' }}"
+data-max-slots="{{ shift.max_slots }}"
+data-role="volunteer">
+
+<!-- Show already assigned volunteers (read-only for admin) -->
+{% if request.user.is_staff and shift and shift.users %}
+    {% for vol in shift.users %}
+        <div class="volunteer-name"
+             style="opacity:0.6; font-style:italic;"
+             title="Frivillig – ikke redigerbar">
+            {{ vol }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+</td>
+
                         {% endfor %}
                     </tr>
                     {% endfor %}
