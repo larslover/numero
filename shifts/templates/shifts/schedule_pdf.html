@@ -14,6 +14,26 @@
         .header-day { font-weight: bold; }
         .header-date { font-size: smaller; }
     </style>
+    <head>
+        <meta charset="UTF-8">
+        <title>Vaktplan PDF - Uke {{ week_number }}</title>
+        <style>
+            body { font-family: sans-serif; font-size: 12px; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+            th, td { border: 1px solid #000; padding: 5px; text-align: left; }
+            th { background-color: #f0f0f0; }
+            h2 { text-align: center; }
+            .header-day { font-weight: bold; }
+            .header-date { font-size: smaller; }
+    
+            /* Second block merged here */
+            table { table-layout: fixed; }
+            th, td { padding: 3px; font-size: 10px; word-wrap: break-word; }
+            .header-day { font-size: 11px; white-space: nowrap; }
+            .header-date { font-size: 9px; }
+        </style>
+    </head>
+    
 </head>
 <body>
     <h2>Vaktplan - Uke {{ week_number }}</h2>
@@ -108,5 +128,6 @@
             {% endfor %}
         </tbody>
     </table>
+    
 </body>
 </html>
