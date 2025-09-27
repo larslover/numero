@@ -42,77 +42,81 @@ def my_bookings(request):
         "saturday_times": saturday_times,
     }
     return render(request, "shifts/my_bookings.html", context)
+from datetime import datetime, timedelta
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from shifts.models import ShiftAssignment, TimeSlot, VolunteerLimit
+import logging
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def schedule_view(request, week_offset=0):
     logger.debug(f"Week Offset: {week_offset}")
 
+    # Determine the target week
     today = datetime.now()
     target_week = today + timedelta(weeks=int(week_offset))
     start_of_week = target_week - timedelta(days=target_week.weekday())
 
+    # Prepare context data
     shifts = []
     shift_map = {}
 
+    # Weekday info (Mon-Fri)
     weekdays_combined = [
-        ((start_of_week + timedelta(days=i)).strftime("%A"), (start_of_week + timedelta(days=i)).strftime("%Y-%m-%d"))
+        ((start_of_week + timedelta(days=i)).strftime("%A"), 
+         (start_of_week + timedelta(days=i)).strftime("%Y-%m-%d"))
         for i in range(5)
     ]
 
     weekday_time_slots = TimeSlot.objects.filter(is_weekend=False)
     saturday_time_slots = TimeSlot.objects.filter(is_weekend=True)
 
-    volunteer_limits = {
-        obj.date.strftime("%Y-%m-%d"): obj.limit
-        for obj in VolunteerLimit.objects.all()
-    }
+    # Volunteer limits lookup
+    volunteer_limits = {obj.date.strftime("%Y-%m-%d"): obj.limit for obj in VolunteerLimit.objects.all()}
 
-    # Prepare this outside the loop to prevent UnboundLocalError
+    # Admin worker list
     workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
 
-    # Loop for weekdays (Monday to Friday)
-    # Weekdays (Monday to Friday)
-# Weekdays (Monday to Friday)
+    # Helper to build shift info and map key
+    def build_shift(date, date_str, time_slot):
+        assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
+        workers = [a.user for a in assignments if a.role == "worker"]
+        volunteers = [a.user for a in assignments if a.role == "volunteer"]
+
+        shift_info = {
+            "date": date_str,
+            "time_slot": time_slot,
+            "workers": workers,
+            "volunteers": volunteers,
+            "users": [u.username for u in volunteers],  # for JS
+            "max_slots": volunteer_limits.get(date_str, 2),
+        }
+
+        # Use "WD" for weekday, "WE" for weekend to prevent collisions
+        week_flag = "WE" if time_slot.is_weekend else "WD"
+        shift_map[f"{date_str}|{time_slot.label}|{week_flag}"] = shift_info
+
+        return shift_info
+
+    # Weekdays (Monday-Friday)
     for i in range(5):
         date = start_of_week + timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
         for time_slot in weekday_time_slots:
-            assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
-            workers = [a.user for a in assignments if a.role == "worker"]
-            volunteers = [a.user for a in assignments if a.role == "volunteer"]  # <-- keep as User objects
-
-            shift_info = {
-                "date": date_str,
-                "time_slot": time_slot,
-                "workers": workers,
-                "volunteers": volunteers,  # <-- pass User objects
-                "users": [u.username for u in volunteers],  # for JS if needed
-                "max_slots": volunteer_limits.get(date_str, 2),
-            }
-
+            shift_info = build_shift(date, date_str, time_slot)
             shifts.append(shift_info)
-            shift_map[f"{date_str}|{time_slot.label}"] = shift_info
 
     # Saturday
     saturday_date = start_of_week + timedelta(days=5)
     saturday_str = saturday_date.strftime("%Y-%m-%d")
     for time_slot in saturday_time_slots:
-        assignments = ShiftAssignment.objects.filter(date=saturday_date, time_slot=time_slot)
-        workers = [a.user for a in assignments if a.role == "worker"]
-        volunteers = [a.user for a in assignments if a.role == "volunteer"]  # <-- keep as User objects
-
-        shift_info = {
-            "date": saturday_str,
-            "time_slot": time_slot,
-            "workers": workers,
-            "volunteers": volunteers,
-            "users": [u.username for u in volunteers],  # for JS
-            "max_slots": volunteer_limits.get(saturday_str, 2),
-        }
-
+        shift_info = build_shift(saturday_date, saturday_str, time_slot)
         shifts.append(shift_info)
-        shift_map[f"{saturday_str}|{time_slot.label}"] = shift_info
 
+    # Build template context
     context = {
         "week_number": target_week.isocalendar()[1],
         "week_offset": week_offset,
