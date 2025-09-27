@@ -60,33 +60,128 @@ def remove_shift_assignment(request):
 
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
+import json
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
-@require_POST
-@login_required
-@user_passes_test(lambda u: u.is_staff)
-@api_view(['POST'])
+from .models import TimeSlot, ShiftAssignment
 
-def assign_shift(request):
-    print(f"Received data: {request.data}")
-    user_id = request.data.get('user_id')
-    date = request.data.get('date')
-    time_slot_label = request.data.get('time_slot')
-
+def is_weekend(date_str):
+    """Return True if the date string (YYYY-MM-DD) is Saturday/Sunday."""
     try:
-        user = User.objects.get(id=user_id)
-        time_slot = TimeSlot.objects.get(label=time_slot_label)
-    except (User.DoesNotExist, TimeSlot.DoesNotExist):
-        return Response({"error": "User or TimeSlot not found"}, status=400)
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except Exception:
+        return None
+    return date_obj.weekday() >= 5  # 5=Saturday, 6=Sunday
 
-    shift_assignment = ShiftAssignment.objects.create(
-        user=user,
-        date=date,
-        time_slot=time_slot,
-        role='worker'
-    )
+def get_timeslot_safe(label=None, slot_id=None, date_str=None):
+    """
+    Return a TimeSlot object safely.
+    Prefer lookup by id if provided. Otherwise require label + date_str to
+    disambiguate weekday/weekend.
+    """
+    if slot_id:
+        return TimeSlot.objects.filter(pk=slot_id).first()
 
-    return Response({"status": "success", "message": "Shift assigned successfully"})
+    if not label or not date_str:
+        return None
 
+    weekend_flag = is_weekend(date_str)
+    if weekend_flag is None:
+        return None
+
+    qs = TimeSlot.objects.filter(label=label, is_weekend=weekend_flag)
+    return qs.first()  # returns None if no match
+
+
+@csrf_exempt
+def assign_shift(request):
+    """
+    Admin endpoint to assign a worker to a shift.
+    Accepts JSON or form-encoded POST:
+      - user_id
+      - date (YYYY-MM-DD)
+      - time_slot  (label)  OR time_slot_id (pk)
+      - role (optional, defaults to 'worker')
+    Responds with JSON: { ok: bool, status: 'success'|'error', message: '...' }
+    """
+    if request.method != "POST":
+        return JsonResponse({"ok": False, "status": "error", "message": "Use POST"}, status=405)
+
+    # parse body either as JSON or form POST
+    data = {}
+    content_type = request.META.get("CONTENT_TYPE", "")
+    if "application/json" in content_type:
+        try:
+            data = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"ok": False, "status": "error", "message": "Invalid JSON"}, status=400)
+    else:
+        # form-encoded: use POST dict (works for standard form / fetch with form data)
+        data = request.POST.dict() if hasattr(request, "POST") else {}
+
+        # fallback: sometimes JS sends JSON but content-type missing; try to parse anyway
+        if not data and request.body:
+            try:
+                data = json.loads(request.body.decode("utf-8") or "{}")
+            except Exception:
+                data = {}
+
+    user_id = data.get("user_id") or data.get("user")
+    date = data.get("date")
+    time_slot_label = data.get("time_slot")
+    time_slot_id = data.get("time_slot_id") or data.get("time_slot_pk")
+    role = data.get("role", "worker")
+
+    if not user_id or not date or (not time_slot_id and not time_slot_label):
+        return JsonResponse({
+            "ok": False,
+            "status": "error",
+            "message": "Missing required fields: user_id, date, and time_slot (label or id)."
+        }, status=400)
+
+    # fetch user
+    user = User.objects.filter(pk=user_id).first()
+    if not user:
+        return JsonResponse({"ok": False, "status": "error", "message": "User not found."}, status=400)
+
+    # fetch timeslot safely (handles same label for weekday/weekend)
+    time_slot = get_timeslot_safe(label=time_slot_label, slot_id=time_slot_id, date_str=date)
+    if not time_slot:
+        return JsonResponse({
+            "ok": False,
+            "status": "error",
+            "message": "TimeSlot not found for given date (did you pass the correct date format YYYY-MM-DD?)."
+        }, status=400)
+
+    # Prevent duplicate assignment in same role
+    if ShiftAssignment.objects.filter(user=user, date=date, time_slot=time_slot, role=role).exists():
+        return JsonResponse({
+            "ok": False,
+            "status": "error",
+            "message": f"User is already assigned as {role} for this slot."
+        }, status=400)
+
+    # Optional: block cross-role double-booking (worker & volunteer same person same slot)
+    if ShiftAssignment.objects.filter(user=user, date=date, time_slot=time_slot).exclude(role=role).exists():
+        return JsonResponse({
+            "ok": False,
+            "status": "error",
+            "message": "User already booked in the other role for this slot."
+        }, status=400)
+
+    # create assignment
+    try:
+        sa = ShiftAssignment.objects.create(user=user, date=date, time_slot=time_slot, role=role)
+    except ValidationError as e:
+        return JsonResponse({"ok": False, "status": "error", "message": str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({"ok": False, "status": "error", "message": f"Internal error: {e}"}, status=500)
+
+    return JsonResponse({"ok": True, "status": "success", "message": "Shift assigned successfully", "shift_id": sa.id})
 
 def get_time_slots(request):
     date_str = request.GET.get("date")
