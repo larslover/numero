@@ -25,40 +25,54 @@ def get_timeslot_safe(label, date_str):
         # Fallback: pick the first one
         return TimeSlot.objects.filter(label=label, is_weekend=weekend_flag).first()
 
-
 @csrf_exempt
 def join_shift(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
     try:
+        print("=== join_shift called ===")
+        print("Raw body:", request.body)
+
         data = json.loads(request.body)
         user_id = data.get('user_id')
         date = data.get('date')
         time_slot_label = data.get('time_slot')
         role = data.get('role')
 
+        print(f"Parsed data -> user_id: {user_id}, date: {date}, time_slot: {time_slot_label}, role: {role}")
+
         if not user_id or not date or not time_slot_label or not role:
+            print("⚠️ Missing required fields")
             return JsonResponse({'status': 'error', 'message': 'Missing required fields'}, status=400)
 
         user = User.objects.filter(id=user_id).first()
         if not user:
+            print(f"❌ User not found for ID {user_id}")
             return JsonResponse({'status': 'error', 'message': 'User not found'}, status=400)
+        print(f"✅ Found user: {user.username}")
 
         time_slot = get_timeslot_safe(time_slot_label, date)
         if not time_slot:
+            print(f"❌ TimeSlot not found for label '{time_slot_label}' on date {date}")
             return JsonResponse({'status': 'error', 'message': 'Invalid time slot'}, status=400)
+        print(f"✅ Found timeslot: {time_slot}")
 
-        if ShiftAssignment.objects.filter(user=user, date=date, time_slot=time_slot, role=role).exists():
+        exists = ShiftAssignment.objects.filter(user=user, date=date, time_slot=time_slot, role=role).exists()
+        print("Existing assignment?", exists)
+        if exists:
             return JsonResponse({'status': 'error', 'message': 'User is already booked for this shift'}, status=400)
 
-        ShiftAssignment.objects.create(user=user, date=date, time_slot=time_slot, role=role)
+        sa = ShiftAssignment.objects.create(user=user, date=date, time_slot=time_slot, role=role)
+        print(f"✅ Created ShiftAssignment: {sa.id}")
 
         return JsonResponse({'status': 'success', 'message': 'Shift joined successfully'}, status=200)
 
     except json.JSONDecodeError:
+        print("❌ JSON decode error")
         return JsonResponse({'status': 'error', 'message': 'Invalid JSON format'}, status=400)
     except Exception as e:
+        print(f"❌ Exception: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 

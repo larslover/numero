@@ -3,20 +3,20 @@
 
 <!DOCTYPE html>
 <html lang="no">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token }}">
-        <meta name="username" content="{{ request.user.username }}">
-        <title>Ukentlig Vaktplan</title>
-        <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
-        <!-- Bootstrap CSS -->
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    </head>
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Ukentlig Vaktplan</title>
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
 <body>
-<div class="main-container">
+<!-- Add wrapper with logged-in user info -->
+<div class="main-container" id="schedule" data-user-id="{{ request.user.id }}" data-username="{{ request.user.username|escapejs }}">
 
     <!-- Top bar -->
     <div class="top-bar d-flex justify-content-between align-items-start flex-wrap p-3 rounded shadow-sm mb-4">
@@ -214,99 +214,87 @@
 
         </div> <!-- end desktop tables -->
 
-    <!-- MOBILE CARDS -->
-<div class="d-block d-md-none">
+        <!-- MOBILE CARDS -->
+        <div class="d-block d-md-none">
+            {% for weekday, date in weekdays_combined %}
+            <div class="card mb-3">
+                <div class="card-header">{{ weekday|translate_weekday }} – {{ date }}</div>
+                <div class="card-body">
+                    {% for time in weekday_times %}
+                        {% get_shift shifts date time as shift %}
 
-    <!-- WEEKDAY CARDS -->
-    {% for weekday, date in weekdays_combined %}
-    <div class="card mb-3">
-        <div class="card-header">
-            {{ weekday|translate_weekday }} – {{ date }}
-        </div>
-        <div class="card-body">
+                        <!-- Ansatt -->
+                        <div class="mb-2">
+                            <p><strong>{{ time.label }} – Ansatt:</strong></p>
+                            {% if shift and shift.workers %}
+                                {% for worker in shift.workers %}
+                                    {{ worker.username }}<br>
+                                {% endfor %}
+                            {% else %}
+                                –
+                            {% endif %}
+                        </div>
 
-            {% for time in weekday_times %}
-                {% get_shift shifts date time as shift %}
+                        <!-- Volunteer -->
+                        <div class="mb-2">
+                            <p><strong>{{ time.label }} – Frivillig:</strong></p>
+                            <div class="volunteer-slot"
+                                 data-date="{{ date }}"
+                                 data-time-slot="{{ time.label }}"
+                                 data-role="volunteer"
+                                 data-users="{{ shift.users|join:',' }}"
+                                 data-max-slots="{{ shift.max_slots }}"
+                                 data-is-staff="{{ request.user.is_staff }}">
+                                <!-- Buttons will be populated by JS -->
+                            </div>
+                        </div>
 
-                <!-- Ansatt (no buttons) -->
-                <div class="mb-2">
-                    <p><strong>{{ time.label }} – Ansatt:</strong></p>
-                    {% if shift and shift.workers %}
-                        {% for worker in shift.workers %}
-                            {{ worker.username }}<br>
-                        {% endfor %}
-                    {% else %}
-                        – 
-                    {% endif %}
+                        <hr>
+                    {% endfor %}
                 </div>
-
-               <!-- Volunteer (JS-controlled) -->
-<div class="mb-2">
-    <p><strong>{{ time.label }} – Frivillig:</strong></p>
-    <div class="volunteer-slot"
-         data-date="{{ date }}"
-         data-time-slot="{{ time.label }}"
-         data-role="volunteer"
-         data-users="{{ shift.users|join:',' }}"
-         data-max-slots="{{ shift.max_slots }}"
-         data-is-staff="{{ request.user.is_staff }}">
-        <!-- Buttons will be populated by JS -->
-    </div>
-</div>
-
-
-                <hr>
+            </div>
             {% endfor %}
 
-        </div>
-    </div>
-    {% endfor %}
+            <!-- WEEKEND CARDS -->
+            {% for date in weekend_dates %}
+            <div class="card mb-3">
+                <div class="card-header">Lørdag – {{ date }}</div>
+                <div class="card-body">
+                    {% for time in saturday_times %}
+                        {% get_shift shifts date time as shift %}
 
-    <!-- WEEKEND CARDS -->
-    {% for date in weekend_dates %}
-    <div class="card mb-3">
-        <div class="card-header">
-            Lørdag – {{ date }}
-        </div>
-        <div class="card-body">
+                        <!-- Ansatt -->
+                        <div class="mb-2">
+                            <p><strong>{{ time.label }} – Ansatt:</strong></p>
+                            {% if shift and shift.workers %}
+                                {% for worker in shift.workers %}
+                                    {{ worker.username }}<br>
+                                {% endfor %}
+                            {% else %}
+                                –
+                            {% endif %}
+                        </div>
 
-            {% for time in saturday_times %}
-                {% get_shift shifts date time as shift %}
+                        <!-- Volunteer -->
+                        <div class="mb-2">
+                            <p><strong>{{ time.label }} – Frivillig:</strong></p>
+                            <div class="volunteer-slot"
+                                 data-date="{{ date }}"
+                                 data-time-slot="{{ time.label }}"
+                                 data-role="volunteer"
+                                 data-users="{{ shift.users|join:',' }}"
+                                 data-max-slots="{{ shift.max_slots }}"
+                                 data-is-staff="{{ request.user.is_staff }}">
+                                <!-- Buttons will be populated by JS -->
+                            </div>
+                        </div>
 
-                <!-- Ansatt (no buttons) -->
-                <div class="mb-2">
-                    <p><strong>{{ time.label }} – Ansatt:</strong></p>
-                    {% if shift and shift.workers %}
-                        {% for worker in shift.workers %}
-                            {{ worker.username }}<br>
-                        {% endfor %}
-                    {% else %}
-                        – 
-                    {% endif %}
+                        <hr>
+                    {% endfor %}
                 </div>
-
-              <!-- Volunteer (JS-controlled) -->
-<div class="mb-2">
-    <p><strong>{{ time.label }} – Frivillig:</strong></p>
-    <div class="volunteer-slot"
-         data-date="{{ date }}"
-         data-time-slot="{{ time.label }}"
-         data-role="volunteer"
-         data-users="{{ shift.users|join:',' }}"
-         data-max-slots="{{ shift.max_slots }}"
-         data-is-staff="{{ request.user.is_staff }}">
-        <!-- Buttons will be populated by JS -->
-    </div>
-</div>
-
-                <hr>
+            </div>
             {% endfor %}
-
         </div>
-    </div>
-    {% endfor %}
-
-</div>
 
     </div> <!-- end content-layout -->
 
@@ -314,8 +302,10 @@
 
 <!-- Scripts -->
 <script>
-    const loggedInUser = "{{ request.user.username|default:''|escapejs }}";
-    const loggedInUserId = "{{ request.user.id|default:'null' }}";
+    // read user info from wrapper div
+    const scheduleEl = document.getElementById('schedule');
+    const loggedInUser = scheduleEl.dataset.username;
+    const loggedInUserId = scheduleEl.dataset.userId;
     const csrftoken = '{{ csrf_token }}';
 </script>
 

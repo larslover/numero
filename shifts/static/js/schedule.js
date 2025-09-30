@@ -1,7 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // CSRF token
     const csrfToken = document.querySelector('[name=csrf-token]').content;
-    const loggedInUser = "{{ request.user.username|escapejs }}";
-    const loggedInUserId = "{{ request.user.id }}";
+
+    // Logged-in user info from wrapper div (add these in your template: <div id="schedule" data-username="{{ request.user.username }}" data-user-id="{{ request.user.id }}">)
+    const scheduleEl = document.getElementById('schedule');
+    const loggedInUser = scheduleEl ? scheduleEl.dataset.username : '';
+    const loggedInUserId = scheduleEl ? scheduleEl.dataset.userId : null;
 
     // Helper to update a volunteer slot
     function updateSlot(slot) {
@@ -13,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         slot.innerHTML = '';
 
-        // Show existing users except logged in user
+        // Show existing users except logged-in user
         currentUsers.forEach(user => {
             if (user !== loggedInUser) {
                 const nameTag = document.createElement('div');
@@ -25,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const userAlreadyJoined = currentUsers.includes(loggedInUser);
 
-        // Show button for logged in user
+        // Show button for logged-in user if not joined and slots available
         if (!userAlreadyJoined && currentUsers.length < maxSlots) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -36,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => joinShift(slot, btn));
         }
 
+        // Show cancel button if already joined
         if (userAlreadyJoined) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -54,7 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetch('/en/api/join/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': csrfToken 
+            },
             body: JSON.stringify({ user_id: loggedInUserId, date, time_slot: timeSlot, role })
         })
         .then(res => res.json())
@@ -64,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentUsers.push(loggedInUser);
                 slot.dataset.users = currentUsers.join(',');
                 updateSlot(slot);
+            } else {
+                console.error('Join failed:', data.message);
             }
         })
         .catch(err => console.error('Join failed:', err));
@@ -76,7 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fetch('/en/api/cancel/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRFToken': csrfToken 
+            },
             body: JSON.stringify({ user_id: loggedInUserId, date, time_slot: timeSlot, role })
         })
         .then(res => res.json())
@@ -86,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentUsers = currentUsers.filter(u => u !== loggedInUser);
                 slot.dataset.users = currentUsers.join(',');
                 updateSlot(slot);
+            } else {
+                console.error('Cancel failed:', data.message);
             }
         })
         .catch(err => console.error('Cancel failed:', err));
