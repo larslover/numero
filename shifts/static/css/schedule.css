@@ -285,3 +285,11 @@ table p, table li, td p {
   margin-top: 0;
   margin-bottom: 10px; /* optional: keep a bit of spacing below */
 }
+.d-block.d-md-none .card-header {
+  position: sticky;
+  top: 0;
+  background: #f8f9fa;
+  z-index: 10;
+  border-bottom: 1px solid #dee2e6;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
