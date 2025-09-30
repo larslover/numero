@@ -14,6 +14,11 @@ class Shift(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.time_slot}"
+
+    class Meta:
+        verbose_name = "Vakt"
+        verbose_name_plural = "Vakter"
+
 class TimeSlot(models.Model):
     label = models.CharField(_("Tidspunkt"), max_length=50)  # Remove unique=True
     is_weekend = models.BooleanField(_("Helg?"), default=False)
@@ -41,7 +46,6 @@ class VolunteerLimit(models.Model):
         return f"{self.date} - {self.limit} frivillige"
 
 from django.core.exceptions import ValidationError
-
 class ShiftAssignment(models.Model):
     ROLE_CHOICES = [
         ('worker', "Ansatt"),
@@ -55,6 +59,8 @@ class ShiftAssignment(models.Model):
 
     class Meta:
         unique_together = ('user', 'date', 'time_slot', 'role')
+        verbose_name = "Vaktoppgave"
+        verbose_name_plural = "Vaktoppgaver"
 
     def clean(self):
         # Check for double booking

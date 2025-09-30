@@ -1,17 +1,26 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
-from .models import VolunteerLimit, ShiftAssignment, TimeSlot, UserProfile
-from .forms import ShiftAssignmentForm
 from django.contrib.admin import SimpleListFilter
 from django.http import JsonResponse
 import datetime
 
-# Inline for UserProfile (unchanged)
+from .models import Shift, ShiftAssignment, TimeSlot, VolunteerLimit, UserProfile
+from .forms import ShiftAssignmentForm
+
+# -----------------------
+# Admin Site Header
+# -----------------------
+admin.site.site_header = "Vaktplan Admin"
+admin.site.site_title = "Vaktplan"
+admin.site.index_title = "Administrasjon"
+
+# -----------------------
+# UserProfile Inline
+# -----------------------
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
-    verbose_name_plural = "Profile"
+    verbose_name_plural = "Profil"
     fields = ('role', 'bio', 'phone_number')
 
     def get_extra(self, request, obj=None, **kwargs):
@@ -22,18 +31,18 @@ class UserProfileInline(admin.StackedInline):
             return False
         return not UserProfile.objects.filter(user=obj).exists()
 
-def get_time_slots(request):
-    date_str = request.GET.get("date")
-    try:
-        date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-        is_weekend = date_obj.weekday() >= 5
-        slots = TimeSlot.objects.filter(is_weekend=is_weekend)
-        data = [{"id": slot.id, "label": slot.label} for slot in slots]
-    except Exception as e:
-        data = []
-    return JsonResponse(data, safe=False)
+# -----------------------
+# Shift Admin
+# -----------------------
+@admin.register(Shift)
+class ShiftAdmin(admin.ModelAdmin):
+    list_display = ('date', 'time_slot')
+    ordering = ('date', 'time_slot')
+    # verbose_name_plural is read from model Meta, no need to set here
 
-
+# -----------------------
+# ShiftAssignment Admin
+# -----------------------
 @admin.register(ShiftAssignment)
 class ShiftAssignmentAdmin(admin.ModelAdmin):
     form = ShiftAssignmentForm
@@ -45,15 +54,17 @@ class ShiftAssignmentAdmin(admin.ModelAdmin):
     class Media:
         js = ("shifts/js/time_slot_dynamic.js",)
 
-
+# -----------------------
+# TimeSlot Admin
+# -----------------------
 class TimeSlotWeekendFilter(SimpleListFilter):
-    title = 'Weekend Filter'
+    title = 'Helg / Ukedag'
     parameter_name = 'is_weekend'
 
     def lookups(self, request, model_admin):
         return (
-            ('True', 'Weekend'),
-            ('False', 'Weekday'),
+            ('True', 'Helg'),
+            ('False', 'Ukedag'),
         )
 
     def queryset(self, request, queryset):
@@ -63,7 +74,6 @@ class TimeSlotWeekendFilter(SimpleListFilter):
             return queryset.filter(is_weekend=False)
         return queryset
 
-
 @admin.register(TimeSlot)
 class TimeSlotAdmin(admin.ModelAdmin):
     list_display = ("label", "is_weekend", "order")
@@ -71,7 +81,9 @@ class TimeSlotAdmin(admin.ModelAdmin):
     ordering = ("order",)
     list_filter = (TimeSlotWeekendFilter,)
 
-
+# -----------------------
+# VolunteerLimit Admin
+# -----------------------
 @admin.register(VolunteerLimit)
 class VolunteerLimitAdmin(admin.ModelAdmin):
     list_display = ("date", "limit")
@@ -79,10 +91,11 @@ class VolunteerLimitAdmin(admin.ModelAdmin):
     search_fields = ("date",)
     list_filter = ("date",)
 
-
-# Custom filter to filter users by role from UserProfile
+# -----------------------
+# Role Filter for Users
+# -----------------------
 class RoleFilter(SimpleListFilter):
-    title = 'Rolle'  # Displayed title in admin sidebar
+    title = 'Rolle'
     parameter_name = 'role'
 
     def lookups(self, request, model_admin):
@@ -98,9 +111,11 @@ class RoleFilter(SimpleListFilter):
             return queryset.filter(userprofile__role='volunteer')
         return queryset
 
+# -----------------------
+# Custom User Admin
+# -----------------------
 class UserAdmin(admin.ModelAdmin):
     inlines = [UserProfileInline]
-
     list_display = ("username", "email", "is_active", "date_joined")
     list_filter = ("is_active", "date_joined", RoleFilter)
     actions = ["approve_users"]
@@ -110,12 +125,10 @@ class UserAdmin(admin.ModelAdmin):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-    approve_users.short_description = "Approve selected users"
+    approve_users.short_description = "Godkjenn valgte brukere"
 
     def has_add_permission(self, request):
-        # Return False to disable the "Add user" button for everyone
         return False
 
-# Unregister default User admin and register the customized one
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
