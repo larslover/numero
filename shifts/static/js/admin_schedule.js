@@ -13,6 +13,7 @@ function allowDrop(event) {
 function handleDragStart(event) {
   const workerElement = event.target;
 
+  // keep your existing check (sidebar items have class 'worker' in your reverted version)
   if (!workerElement.classList.contains('worker')) {
     console.warn("The target is not a worker element.");
     return;
@@ -29,6 +30,7 @@ function handleDragStart(event) {
   draggedWorkerId = workerId;
   draggedWorkerName = workerUsername;
 
+  // store a JSON payload so removal also works (slot items use same JSON)
   event.dataTransfer.setData('text/plain', JSON.stringify({
     workerId: workerId,
     username: workerUsername
@@ -39,10 +41,12 @@ function handleDragStart(event) {
 
 function handleDragOver(event) {
   event.preventDefault();
-  event.target.classList.add('drag-over');
+  // Use currentTarget if present to avoid styling inner elements
+  const el = event.currentTarget || event.target;
+  el.classList.add('drag-over');
 }
 
-// From slot to trash
+// From slot to trash (dragging an assigned name)
 function handleSlotToTrashDragStart(event) {
   const el = event.target;
   const workerId = el.dataset.userid;
@@ -57,22 +61,47 @@ function handleSlotToTrashDragStart(event) {
   console.log("Dragging to trash:", { workerId, date, timeSlotId });
 }
 
+// DROP handler — updated to detect role
 function handleDrop(event) {
   event.preventDefault();
-  event.target.classList.remove('drag-over');
 
-  const workerData = JSON.parse(event.dataTransfer.getData('text/plain'));
-  const date = event.target.getAttribute('data-date');
-  const timeSlot = event.target.getAttribute('data-time-slot');
+  // remove drag-over class from the element that has the handler
+  const slotEl = event.currentTarget || event.target;
+  slotEl.classList.remove('drag-over');
 
-  console.log("Dropped on:", { date, timeSlot });
+  // The sidebar and slot drags set 'text/plain' JSON; slot-to-trash sets 'application/json' too
+  const raw = event.dataTransfer.getData('text/plain') || event.dataTransfer.getData('application/json');
+  if (!raw) {
+    console.warn("No transferable data found");
+    return;
+  }
+
+  let workerData;
+  try {
+    workerData = JSON.parse(raw);
+  } catch (err) {
+    console.error("Failed parsing drop data:", err, raw);
+    return;
+  }
+
+  // get attributes from the element that has the event listener (the slot)
+  const date = slotEl.getAttribute('data-date');
+  const timeSlot = slotEl.getAttribute('data-time-slot') || slotEl.getAttribute('data-timeslot'); // accept both names
+  const timeSlotId = slotEl.getAttribute('data-timeslotid');
+  // detect role based on slot class or data-role attribute
+  const role = slotEl.classList.contains('volunteer-slot') || slotEl.getAttribute('data-role') === 'volunteer'
+    ? 'volunteer'
+    : 'worker';
+
+  console.log("Dropped on:", { date, timeSlot, role, workerData });
 
   if (!workerData.workerId || !date || !timeSlot) {
     console.warn("Missing drop data");
     return;
   }
 
-  assignWorkerToShift(workerData.workerId, date, timeSlot);
+  // call assign and include role & timeslotId where available
+  assignWorkerToShift(workerData.workerId, date, timeSlot, role, timeSlotId);
 }
 
 function handleTrashDrop(event) {
@@ -103,8 +132,12 @@ function handleTrashDrop(event) {
 }
 
 // === API Communication ===
-function assignWorkerToShift(workerId, date, timeSlot) {
-  console.log(`Assigning worker ${workerId} to ${date} / ${timeSlot}`);
+// note: now accepts `role` and optional timeSlotId
+function assignWorkerToShift(workerId, date, timeSlot, role = 'worker', timeSlotId = null) {
+  console.log(`Assigning ${role} ${workerId} to ${date} / ${timeSlot} (timeslotId=${timeSlotId})`);
+
+  const payload = { user_id: workerId, date, time_slot: timeSlot, role };
+  if (timeSlotId) payload.time_slot_id = timeSlotId;
 
   fetch('/en/api/assign/', {
     method: 'POST',
@@ -113,15 +146,22 @@ function assignWorkerToShift(workerId, date, timeSlot) {
       'X-CSRFToken': csrfToken
     },
     credentials: 'include',
-    body: JSON.stringify({ user_id: workerId, date, time_slot: timeSlot })
+    body: JSON.stringify(payload)
   })
     .then(response => {
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
       return response.json();
     })
     .then(data => {
       console.log('Assigned successfully:', data);
-      if (data.status === 'success') location.reload();
+      // backend returns {"ok": True, "status":"success", ...} — your previous code checked data.status === 'success'
+      // here we check both common variants
+      if (data.status === 'success' || data.ok === true) {
+        location.reload();
+      } else {
+        console.warn('Assignment did not return success:', data);
+        // optionally show an error to user here
+      }
     })
     .catch(error => console.error('Assignment failed:', error));
 }
@@ -145,24 +185,29 @@ function removeWorkerFromShift(workerId, date, timeSlotId) {
 
 // === DOM Ready / Event Binding ===
 document.addEventListener('DOMContentLoaded', () => {
+  // ensure csrfToken is available globally (your template defines csrftoken earlier)
   window.csrfToken = document.querySelector('[name=csrf-token]').content;
 
+  // sidebar worker items (draggable user list)
   document.querySelectorAll('.worker').forEach(worker => {
     worker.addEventListener('dragstart', handleDragStart);
   });
 
-  document.querySelectorAll('.time-slot, .worker-drop-target').forEach(slot => {
+  // Add drop listeners to all slot types, including volunteer slots
+  document.querySelectorAll('.time-slot, .worker-drop-target, .worker-drop-zone, .worker-drop-target, .volunteer-slot, .worker-slot').forEach(slot => {
     slot.addEventListener('dragover', handleDragOver);
     slot.addEventListener('drop', handleDrop);
   });
 
-  document.querySelectorAll('.worker-name').forEach(el => {
+  // assigned names inside slots (so admin can drag them to trash)
+  document.querySelectorAll('.worker-name, .volunteer-name, .user-name').forEach(el => {
     el.addEventListener('drop', e => e.stopPropagation());
     el.addEventListener('dragover', e => e.preventDefault());
     el.addEventListener('dragstart', handleSlotToTrashDragStart);
   });
 
-  document.querySelectorAll('.trash-bin').forEach(trashBin => {
+  // trash bin(s)
+  document.querySelectorAll('.trash-bin, #trash-bin').forEach(trashBin => {
     trashBin.addEventListener('dragover', allowDrop);
     trashBin.addEventListener('drop', handleTrashDrop);
   });
