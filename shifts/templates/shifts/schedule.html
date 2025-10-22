@@ -69,9 +69,9 @@
         {% if request.user.is_staff %}
         <!-- Worker list on the left for admins -->
         <aside class="sidebar p-2 border rounded bg-light d-none d-md-block">
-            <h3>Alle Ansatte</h3>
+            <h3>Alle</h3>
             <ul id="worker-list" class="list-unstyled">
-                {% for user in workers_for_admin %}
+                {% for user in all_users %}
                 <li id="worker-{{ user.id }}" class="worker mb-2 p-2 border rounded"
                     draggable="true"
                     data-username="{{ user.username }}"

@@ -1,86 +1,45 @@
 from datetime import datetime, timedelta
-from django.shortcuts import render
 from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-import logging
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.utils import timezone
-
 import logging
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.shortcuts import render
-from shifts.models import ShiftAssignment, TimeSlot
+from django.contrib.auth import get_user_model
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+import weasyprint
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
-@login_required
-def my_bookings(request):
-    today = timezone.now().date()
-    filter_option = request.GET.get("filter", "upcoming")
-
-    # Base queryset
-    user_shifts = ShiftAssignment.objects.filter(user=request.user)
-
-    # Apply filters
-    if filter_option == "upcoming":
-        user_shifts = user_shifts.filter(date__gte=today).order_by("date", "time_slot")
-    elif filter_option == "past":
-        user_shifts = user_shifts.filter(date__lt=today).order_by("-date", "-time_slot")
-    else:  # "all"
-        user_shifts = user_shifts.order_by("date", "time_slot")
-
-    # Pull time slots from DB
-    weekday_times = TimeSlot.objects.filter(is_weekend=False)
-    saturday_times = TimeSlot.objects.filter(is_weekend=True)
-
-    context = {
-        "user_shifts": user_shifts,
-        "weekday_times": weekday_times,
-        "saturday_times": saturday_times,
-    }
-    return render(request, "shifts/my_bookings.html", context)
-from datetime import datetime, timedelta
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
-from shifts.models import ShiftAssignment, TimeSlot, VolunteerLimit
-import logging
 
 logger = logging.getLogger(__name__)
-
 @login_required
 def schedule_view(request, week_offset=0):
     logger.debug(f"Week Offset: {week_offset}")
 
-    # Determine the target week
     today = datetime.now()
     target_week = today + timedelta(weeks=int(week_offset))
     start_of_week = target_week - timedelta(days=target_week.weekday())
 
-    # Prepare context data
     shifts = []
     shift_map = {}
 
-    # Weekday info (Mon-Fri)
     weekdays_combined = [
-        ((start_of_week + timedelta(days=i)).strftime("%A"), 
+        ((start_of_week + timedelta(days=i)).strftime("%A"),
          (start_of_week + timedelta(days=i)).strftime("%Y-%m-%d"))
         for i in range(5)
     ]
 
     weekday_time_slots = TimeSlot.objects.filter(is_weekend=False)
     saturday_time_slots = TimeSlot.objects.filter(is_weekend=True)
-
-    # Volunteer limits lookup
     volunteer_limits = {obj.date.strftime("%Y-%m-%d"): obj.limit for obj in VolunteerLimit.objects.all()}
 
-    # Admin worker list
-    workers_for_admin = User.objects.filter(userprofile__role='worker') if request.user.is_staff else []
+    # ✅ Admin should see ALL users (workers + volunteers)
+    all_users_for_admin = User.objects.all() if request.user.is_staff else []
 
-    # Helper to build shift info and map key
     def build_shift(date, date_str, time_slot):
         assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
         workers = [a.user for a in assignments if a.role == "worker"]
@@ -91,32 +50,29 @@ def schedule_view(request, week_offset=0):
             "time_slot": time_slot,
             "workers": workers,
             "volunteers": volunteers,
-            "users": [u.username for u in volunteers],  # for JS
+            "users": [u.username for u in volunteers],
             "max_slots": volunteer_limits.get(date_str, 2),
         }
+        print("DEBUG shift_map type:", type(shift_map))
+        print("DEBUG time_slot type:", type(time_slot))
 
-        # Use "WD" for weekday, "WE" for weekend to prevent collisions
+
         week_flag = "WE" if time_slot.is_weekend else "WD"
         shift_map[f"{date_str}|{time_slot.label}|{week_flag}"] = shift_info
 
         return shift_info
 
-    # Weekdays (Monday-Friday)
     for i in range(5):
         date = start_of_week + timedelta(days=i)
         date_str = date.strftime("%Y-%m-%d")
         for time_slot in weekday_time_slots:
-            shift_info = build_shift(date, date_str, time_slot)
-            shifts.append(shift_info)
+            shifts.append(build_shift(date, date_str, time_slot))
 
-    # Saturday
     saturday_date = start_of_week + timedelta(days=5)
     saturday_str = saturday_date.strftime("%Y-%m-%d")
     for time_slot in saturday_time_slots:
-        shift_info = build_shift(saturday_date, saturday_str, time_slot)
-        shifts.append(shift_info)
+        shifts.append(build_shift(saturday_date, saturday_str, time_slot))
 
-    # Build template context
     context = {
         "week_number": target_week.isocalendar()[1],
         "week_offset": week_offset,
@@ -129,15 +85,14 @@ def schedule_view(request, week_offset=0):
         "shifts": shifts,
         "shift_map": shift_map,
         "volunteer_limits": volunteer_limits,
-        "all_users": User.objects.all() if request.user.is_staff else [],
-        "workers_for_admin": workers_for_admin,
+        "all_users": all_users_for_admin,  # ✅ replaced workers_for_admin
         "timestamp": datetime.now().timestamp(),
     }
 
     return render(request, "shifts/schedule.html", context)
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-import weasyprint
+
+
+
 def schedule_view_context(request, week_offset=0):
     # Copy all your schedule_view logic up to `context = {...}`
     # but instead of render(), just return `context`
@@ -147,7 +102,7 @@ def schedule_view_context(request, week_offset=0):
     target_week = today + timedelta(weeks=int(week_offset))
     start_of_week = target_week - timedelta(days=target_week.weekday())
 
-    shifts = []
+    
     shift_map = {}
 
     weekdays_combined = [
@@ -227,6 +182,34 @@ def schedule_view_context(request, week_offset=0):
 
 
     return context
+
+@login_required
+def my_bookings(request):
+    today = timezone.now().date()
+    filter_option = request.GET.get("filter", "upcoming")
+
+    # Base queryset
+    user_shifts = ShiftAssignment.objects.filter(user=request.user)
+
+    # Apply filters
+    if filter_option == "upcoming":
+        user_shifts = user_shifts.filter(date__gte=today).order_by("date", "time_slot")
+    elif filter_option == "past":
+        user_shifts = user_shifts.filter(date__lt=today).order_by("-date", "-time_slot")
+    else:  # "all"
+        user_shifts = user_shifts.order_by("date", "time_slot")
+
+    # Pull time slots from DB
+    weekday_times = TimeSlot.objects.filter(is_weekend=False)
+    saturday_times = TimeSlot.objects.filter(is_weekend=True)
+
+    context = {
+        "user_shifts": user_shifts,
+        "weekday_times": weekday_times,
+        "saturday_times": saturday_times,
+    }
+    return render(request, "shifts/my_bookings.html", context)
+
 @login_required
 def schedule_pdf_view(request, week_offset=0):
     # 1️⃣ Get all the schedule data (reuse helper)
