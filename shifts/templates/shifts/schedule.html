@@ -67,31 +67,38 @@
     <div class="content-layout d-flex gap-3 align-items-start">
 
         {% if request.user.is_staff %}
-        <!-- Worker list on the left for admins -->
-        <aside class="sidebar p-2 border rounded bg-light d-none d-md-block">
+        <!-- Sidebar with scrollable worker list and fixed trash bin -->
+        <aside class="sidebar p-2 border rounded bg-light d-none d-md-flex flex-column">
             <h3>Alle</h3>
-            <ul id="worker-list" class="list-unstyled">
-                {% for user in all_users %}
-                    {% if not user.is_superuser %}
-                    <li id="worker-{{ user.id }}" class="worker mb-2 p-2 border rounded"
-                        draggable="true"
-                        data-username="{{ user.username }}"
-                        data-userid="{{ user.id }}">
-                        {{ user.username }}
-                        {% if user.userprofile.role %}
-                            <small class="text-muted">({{ user.userprofile.role|title }})</small>
+        
+            <!-- Scrollable worker list -->
+            <div class="worker-list-wrapper flex-grow-1 overflow-auto">
+                <ul id="worker-list" class="list-unstyled mb-0">
+                    {% for user in all_users %}
+                        {% if not user.is_superuser %}
+                        <li id="worker-{{ user.id }}" class="worker mb-2 p-2 border rounded"
+                            draggable="true"
+                            data-username="{{ user.username }}"
+                            data-userid="{{ user.id }}">
+                            {{ user.username }}
+                            {% if user.userprofile.role %}
+                                <small class="text-muted">({{ user.userprofile.role|title }})</small>
+                            {% endif %}
+                        </li>
                         {% endif %}
-                    </li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-            <div id="trash-bin" class="border border-danger rounded p-3 text-center mt-3"
+                    {% endfor %}
+                </ul>
+            </div>
+        
+            <!-- Trash bin always visible at the bottom -->
+            <div id="trash-bin" class="border border-danger rounded p-3 text-center mt-3 flex-shrink-0"
                  ondragover="event.preventDefault()" ondrop="handleTrashDrop(event)">
                 🗑️ Drag here to remove
             </div>
         </aside>
         {% endif %}
         
+
 
         <!-- DESKTOP TABLES -->
         <div class="tables-container flex-fill d-none d-md-block">
