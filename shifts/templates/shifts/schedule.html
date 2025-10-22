@@ -142,13 +142,31 @@
                         </td>
 
                         <!-- Volunteer -->
-                        <td class="volunteer-slot" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-users="{{ shift.users|join:',' }}" data-max-slots="{{ shift.max_slots }}" data-role="volunteer" data-weekflag="WD">
-                            {% if request.user.is_staff and shift and shift.volunteers %}
-                                {% for vol in shift.volunteers %}
-                                    <div class="volunteer-name text-muted fst-italic" title="Frivillig – ikke redigerbar">{{ vol.username }}</div>
-                                {% endfor %}
-                            {% endif %}
-                        </td>
+                       <!-- Volunteer -->
+<td class="volunteer-slot"
+data-date="{{ date }}"
+data-time-slot="{{ time.label }}"
+data-users="{{ shift.users|join:',' }}"
+data-max-slots="{{ shift.max_slots }}"
+data-role="volunteer"
+data-weekflag="WD">
+{% if request.user.is_staff and shift and shift.volunteers %}
+    {% for vol in shift.volunteers %}
+        <div class="volunteer-name text-muted fst-italic"
+             draggable="true"
+             data-userid="{{ vol.id }}"
+             data-username="{{ vol.username }}"
+             data-date="{{ date }}"
+             data-timeslot="{{ time.label }}"
+             data-timeslotid="{{ time.id }}"
+             data-role="volunteer"
+             title="Frivillig – ikke redigerbar">
+            {{ vol.username }}
+        </div>
+    {% endfor %}
+{% endif %}
+</td>
+
                     {% endfor %}
                 </tr>
                 {% endfor %}
@@ -203,13 +221,31 @@
                         </td>
 
                         <!-- Volunteer -->
-                        <td class="volunteer-slot" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-users="{{ shift.users|join:',' }}" data-max-slots="{{ shift.max_slots }}" data-role="volunteer" data-weekflag="WE">
-                            {% if request.user.is_staff and shift and shift.users %}
-                                {% for vol in shift.users %}
-                                    <div class="volunteer-name text-muted fst-italic" title="Frivillig – ikke redigerbar">{{ vol }}</div>
-                                {% endfor %}
-                            {% endif %}
-                        </td>
+                      <!-- Volunteer -->
+<td class="volunteer-slot"
+data-date="{{ date }}"
+data-time-slot="{{ time.label }}"
+data-users="{{ shift.users|join:',' }}"
+data-max-slots="{{ shift.max_slots }}"
+data-role="volunteer"
+data-weekflag="WD">
+{% if request.user.is_staff and shift and shift.volunteers %}
+    {% for vol in shift.volunteers %}
+        <div class="volunteer-name text-muted fst-italic"
+             draggable="true"
+             data-userid="{{ vol.id }}"
+             data-username="{{ vol.username }}"
+             data-date="{{ date }}"
+             data-timeslot="{{ time.label }}"
+             data-timeslotid="{{ time.id }}"
+             data-role="volunteer"
+             title="Frivillig – ikke redigerbar">
+            {{ vol.username }}
+        </div>
+    {% endfor %}
+{% endif %}
+</td>
+
                     {% endfor %}
                 </tr>
                 {% endfor %}
