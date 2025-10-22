@@ -72,16 +72,17 @@
             <h3>Alle</h3>
             <ul id="worker-list" class="list-unstyled">
                 {% for user in all_users %}
-                <li id="worker-{{ user.id }}" class="worker mb-2 p-2 border rounded"
-                draggable="true"
-                data-username="{{ user.username }}"
-                data-userid="{{ user.id }}">
-                {{ user.username }}
-                {% if user.userprofile.role %}
-                    <small class="text-muted">({{ user.userprofile.role|title }})</small>
-                {% endif %}
-            </li>
-            
+                    {% if not user.is_superuser %}
+                    <li id="worker-{{ user.id }}" class="worker mb-2 p-2 border rounded"
+                        draggable="true"
+                        data-username="{{ user.username }}"
+                        data-userid="{{ user.id }}">
+                        {{ user.username }}
+                        {% if user.userprofile.role %}
+                            <small class="text-muted">({{ user.userprofile.role|title }})</small>
+                        {% endif %}
+                    </li>
+                    {% endif %}
                 {% endfor %}
             </ul>
             <div id="trash-bin" class="border border-danger rounded p-3 text-center mt-3"
