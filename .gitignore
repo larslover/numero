@@ -1,6 +1,24 @@
-db.sqlite3
+# Python
 *.pyc
 __pycache__/
+
+# macOS
+.DS_Store
+
+# Environment
 .env
 myenv/
-.DS_Store
+
+# SQLite database
+db.sqlite3
+
+# Django collectstatic output (don’t track generated files)
+staticfiles/
+
+# PyInstaller / packaging
+*.spec
+dist/
+build/
+
+# Logs and other local files
+*.log
