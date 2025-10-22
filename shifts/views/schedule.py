@@ -102,6 +102,7 @@ def schedule_view_context(request, week_offset=0):
     target_week = today + timedelta(weeks=int(week_offset))
     start_of_week = target_week - timedelta(days=target_week.weekday())
 
+    shifts = []
     
     shift_map = {}
 
