@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot
+from shifts.models import VolunteerLimit, ShiftAssignment, TimeSlot,DailyComment
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 import logging
@@ -10,12 +10,14 @@ from django.contrib.auth import get_user_model
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 import weasyprint
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
 
-logger = logging.getLogger(__name__)
+
 @login_required
 def schedule_view(request, week_offset=0):
     logger.debug(f"Week Offset: {week_offset}")
@@ -40,6 +42,15 @@ def schedule_view(request, week_offset=0):
     # ✅ Admin should see ALL users (workers + volunteers)
     all_users_for_admin = User.objects.all() if request.user.is_staff else []
 
+    # --- Daily comments ---
+    # Fetch all DailyComment objects for the current week
+    week_dates = [date_str for _, date_str in weekdays_combined]
+    saturday_date_str = (start_of_week + timedelta(days=5)).strftime("%Y-%m-%d")
+    week_dates.append(saturday_date_str)
+
+    daily_comments_qs = DailyComment.objects.filter(date__in=week_dates)
+    daily_comments = {dc.date.strftime("%Y-%m-%d"): dc.comment for dc in daily_comments_qs}
+
     def build_shift(date, date_str, time_slot):
         assignments = ShiftAssignment.objects.filter(date=date, time_slot=time_slot)
         workers = [a.user for a in assignments if a.role == "worker"]
@@ -53,9 +64,6 @@ def schedule_view(request, week_offset=0):
             "users": [u.username for u in volunteers],
             "max_slots": volunteer_limits.get(date_str, 2),
         }
-        print("DEBUG shift_map type:", type(shift_map))
-        print("DEBUG time_slot type:", type(time_slot))
-
 
         week_flag = "WE" if time_slot.is_weekend else "WD"
         shift_map[f"{date_str}|{time_slot.label}|{week_flag}"] = shift_info
@@ -85,13 +93,12 @@ def schedule_view(request, week_offset=0):
         "shifts": shifts,
         "shift_map": shift_map,
         "volunteer_limits": volunteer_limits,
-        "all_users": all_users_for_admin,  # ✅ replaced workers_for_admin
+        "all_users": all_users_for_admin,
+        "daily_comments": daily_comments,  # ✅ pass comments to template
         "timestamp": datetime.now().timestamp(),
     }
 
     return render(request, "shifts/schedule.html", context)
-
-
 
 def schedule_view_context(request, week_offset=0):
     # Copy all your schedule_view logic up to `context = {...}`
@@ -183,6 +190,33 @@ def schedule_view_context(request, week_offset=0):
 
 
     return context
+
+
+import json
+# views.py
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def save_daily_comment(request):
+    import json
+    from datetime import datetime
+    from django.http import JsonResponse
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    data = json.loads(request.body)
+    date_str = data.get("date")
+    comment_text = data.get("comment", "").strip()
+    if not date_str:
+        return JsonResponse({"error": "Missing date"}, status=400)
+
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+
+    # Fake DB save just for testing
+    print("Saving comment for", date_obj, comment_text)
+
+    return JsonResponse({"success": True, "comment": comment_text})
 
 @login_required
 def my_bookings(request):

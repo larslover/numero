@@ -338,13 +338,32 @@
 
     </div>
 </div>
-
 <script>
-const scheduleEl = document.getElementById('schedule');
-const loggedInUser = scheduleEl.dataset.username;
-const loggedInUserId = scheduleEl.dataset.userId;
-const csrftoken = '{{ csrf_token }}';
-</script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('✅ Test script running!');
+    
+        // Select all comment textareas
+        const textareas = document.querySelectorAll('.daily-comment');
+        console.log('Found comment boxes:', textareas.length);
+    
+        // Add a simple input listener to log typing
+        textareas.forEach((ta, i) => {
+            ta.addEventListener('input', () => {
+                console.log(`Typing in comment box #${i}`, { value: ta.value, date: ta.dataset.date });
+            });
+        });
+    });
+    </script>
+    
+<script>
+    window.scheduleConfig = {
+        csrfToken: '{{ csrf_token }}',
+        saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
+        loggedInUser: "{{ request.user.username|escapejs }}",
+        loggedInUserId: "{{ request.user.id }}"
+    };
+    </script>
+    
 
 {% if request.user.is_staff %}
     <script src="{% static 'js/admin_schedule.js' %}"></script>
