@@ -15,63 +15,44 @@
 </head>
 
 <body>
-<!-- Add wrapper with logged-in user info -->
 <div class="main-container" id="schedule" data-user-id="{{ request.user.id }}" data-username="{{ request.user.username|escapejs }}">
 
     <!-- Top bar -->
     <div class="top-bar d-flex justify-content-between align-items-start flex-wrap p-3 rounded shadow-sm mb-4">
-
-        <!-- Left: Week info -->
         <div class="top-left mb-2">
             <h1 class="h4 mb-1">Uke {{ week_number }} – Vaktplan</h1>
             <p class="mb-0"><strong>I dag:</strong> {{ today_date }}</p>
         </div>
 
-        <!-- Right: Actions -->
         <div class="top-right d-flex flex-wrap gap-2 align-items-center">
-
-            <!-- User Info -->
             <div class="user-info d-flex align-items-center gap-2">
                 <span>Velkommen, {{ username }}</span>
                 <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Logg ut</a>
             </div>
-
-            <!-- My Bookings / PDF -->
             <div class="my-bookings-link d-flex align-items-center gap-2">
                 {% if not request.user.is_staff %}
                     <a href="{% url 'my_bookings' %}" class="btn btn-primary btn-sm">Mine vakter</a>
                 {% endif %}
-                
-                <!-- PDF button -->
                 <form method="get" action="{% url 'schedule_pdf' week_offset %}" class="d-inline">
                     <button type="submit" class="btn btn-success btn-sm">📄 Last ned PDF</button>
                 </form>
             </div>
-
-            <!-- Navigation buttons -->
             <div class="navigation d-flex gap-1 flex-wrap">
                 <a href="{% url 'schedule_week' 0 %}" class="btn btn-outline-primary btn-sm">← Denne uke</a>
                 <a href="{% url 'schedule_week' week_offset|add:-1 %}" class="btn btn-outline-primary btn-sm">← Forrige uke</a>
                 <a href="{% url 'schedule_week' week_offset|add:1 %}" class="btn btn-outline-primary btn-sm">Neste uke →</a>
             </div>
-
-            <!-- Admin Back -->
             {% if request.user.is_staff %}
             <a href="/en/admin/" class="btn btn-warning btn-sm mt-2 mt-md-0">← Tilbake til Admin</a>
             {% endif %}
-
         </div>
     </div>
 
-    <!-- Layout container: list on left for admins, tables/cards on right -->
     <div class="content-layout d-flex gap-3 align-items-start">
 
         {% if request.user.is_staff %}
-        <!-- Sidebar with scrollable worker list and fixed trash bin -->
         <aside class="sidebar p-2 border rounded bg-light d-none d-md-flex flex-column">
             <h3>Alle</h3>
-        
-            <!-- Scrollable worker list -->
             <div class="worker-list-wrapper flex-grow-1 overflow-auto">
                 <ul id="worker-list" class="list-unstyled mb-0">
                     {% for user in all_users %}
@@ -89,18 +70,13 @@
                     {% endfor %}
                 </ul>
             </div>
-        
-            <!-- Trash bin always visible at the bottom -->
             <div id="trash-bin" class="border border-danger rounded p-3 text-center mt-3 flex-shrink-0"
                  ondragover="event.preventDefault()" ondrop="handleTrashDrop(event)">
                 🗑️ Drag here to remove
             </div>
         </aside>
         {% endif %}
-        
 
-
-        <!-- DESKTOP TABLES -->
         <div class="tables-container flex-fill d-none d-md-block">
 
             <!-- WEEKDAY TABLE -->
@@ -120,16 +96,34 @@
                     </tr>
                 </thead>
                 <tbody>
+               <!-- Daily comment row -->
+<tr class="daily-comments-row">
+    <td><strong>Kommentar:</strong></td>
+    {% for weekday, date in weekdays_combined %}
+        <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
+            {% if request.user.is_staff %}
+                <textarea class="form-control form-control-sm daily-comment"
+                          data-date="{{ date }}"
+                          placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+            {% else %}
+                {% if daily_comments|dict_get:date %}
+                    {{ daily_comments|dict_get:date }}
+                {% else %}
+                    <span class="text-muted fst-italic">Ingen kommentar</span>
+                {% endif %}
+            {% endif %}
+        </td>
+    {% endfor %}
+</tr>
+
+
                 {% for time in weekday_times %}
                 <tr>
                     <td>{{ time.label }}</td>
                     {% for weekday, date in weekdays_combined %}
                         {% get_shift shifts date time as shift %}
-                        <!-- Worker -->
                         <td class="worker-drop-target" id="slot-{{ date }}-{{ time.label }}-worker-WD" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-timeslotid="{{ time.id }}" data-weekflag="WD">
-                            {% if request.user.is_staff %}
-                            <div class="worker-drop-zone">
-                            {% endif %}
+                            {% if request.user.is_staff %}<div class="worker-drop-zone">{% endif %}
                             {% if shift and shift.workers %}
                                 {% for worker in shift.workers %}
                                     <div class="worker-name"
@@ -145,37 +139,32 @@
                                     </div>
                                 {% endfor %}
                             {% endif %}
-                            {% if request.user.is_staff %}
-                            </div>
-                            {% endif %}
+                            {% if request.user.is_staff %}</div>{% endif %}
                         </td>
 
-                        <!-- Volunteer -->
-                       <!-- Volunteer -->
-<td class="volunteer-slot"
-data-date="{{ date }}"
-data-time-slot="{{ time.label }}"
-data-users="{{ shift.users|join:',' }}"
-data-max-slots="{{ shift.max_slots }}"
-data-role="volunteer"
-data-weekflag="WD">
-{% if request.user.is_staff and shift and shift.volunteers %}
-    {% for vol in shift.volunteers %}
-        <div class="volunteer-name text-muted fst-italic"
-             draggable="true"
-             data-userid="{{ vol.id }}"
-             data-username="{{ vol.username }}"
-             data-date="{{ date }}"
-             data-timeslot="{{ time.label }}"
-             data-timeslotid="{{ time.id }}"
-             data-role="volunteer"
-             title="Frivillig – ikke redigerbar">
-            {{ vol.username }}
-        </div>
-    {% endfor %}
-{% endif %}
-</td>
-
+                        <td class="volunteer-slot"
+                            data-date="{{ date }}"
+                            data-time-slot="{{ time.label }}"
+                            data-users="{{ shift.users|join:',' }}"
+                            data-max-slots="{{ shift.max_slots }}"
+                            data-role="volunteer"
+                            data-weekflag="WD">
+                            {% if request.user.is_staff and shift and shift.volunteers %}
+                                {% for vol in shift.volunteers %}
+                                    <div class="volunteer-name text-muted fst-italic"
+                                         draggable="true"
+                                         data-userid="{{ vol.id }}"
+                                         data-username="{{ vol.username }}"
+                                         data-date="{{ date }}"
+                                         data-timeslot="{{ time.label }}"
+                                         data-timeslotid="{{ time.id }}"
+                                         data-role="volunteer"
+                                         title="Frivillig – ikke redigerbar">
+                                        {{ vol.username }}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
@@ -199,16 +188,34 @@ data-weekflag="WD">
                     </tr>
                 </thead>
                 <tbody>
+                <!-- Daily comment row for Saturday/weekend -->
+<tr class="daily-comments-row">
+    <td><strong>Kommentar:</strong></td>
+    {% for date in weekend_dates %}
+        <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
+            {% if request.user.is_staff %}
+                <textarea class="form-control form-control-sm daily-comment"
+                          data-date="{{ date }}"
+                          placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+            {% else %}
+                {% if daily_comments|dict_get:date %}
+                    {{ daily_comments|dict_get:date }}
+                {% else %}
+                    <span class="text-muted fst-italic">Ingen kommentar</span>
+                {% endif %}
+            {% endif %}
+        </td>
+    {% endfor %}
+</tr>
+
+
                 {% for time in saturday_times %}
                 <tr>
                     <td>{{ time.label }}</td>
                     {% for date in weekend_dates %}
                         {% get_shift shifts date time as shift %}
-                        <!-- Worker -->
                         <td class="worker-drop-target" id="slot-{{ date }}-{{ time.label }}-worker-WE" data-date="{{ date }}" data-time-slot="{{ time.label }}" data-timeslotid="{{ time.id }}" data-weekflag="WE">
-                            {% if request.user.is_staff %}
-                            <div class="worker-drop-zone">
-                            {% endif %}
+                            {% if request.user.is_staff %}<div class="worker-drop-zone">{% endif %}
                             {% if shift and shift.workers %}
                                 {% for worker in shift.workers %}
                                     <div class="worker-name"
@@ -224,44 +231,39 @@ data-weekflag="WD">
                                     </div>
                                 {% endfor %}
                             {% endif %}
-                            {% if request.user.is_staff %}
-                            </div>
-                            {% endif %}
+                            {% if request.user.is_staff %}</div>{% endif %}
                         </td>
 
-                        <!-- Volunteer -->
-                      <!-- Volunteer -->
-<td class="volunteer-slot"
-data-date="{{ date }}"
-data-time-slot="{{ time.label }}"
-data-users="{{ shift.users|join:',' }}"
-data-max-slots="{{ shift.max_slots }}"
-data-role="volunteer"
-data-weekflag="WD">
-{% if request.user.is_staff and shift and shift.volunteers %}
-    {% for vol in shift.volunteers %}
-        <div class="volunteer-name text-muted fst-italic"
-             draggable="true"
-             data-userid="{{ vol.id }}"
-             data-username="{{ vol.username }}"
-             data-date="{{ date }}"
-             data-timeslot="{{ time.label }}"
-             data-timeslotid="{{ time.id }}"
-             data-role="volunteer"
-             title="Frivillig – ikke redigerbar">
-            {{ vol.username }}
-        </div>
-    {% endfor %}
-{% endif %}
-</td>
-
+                        <td class="volunteer-slot"
+                            data-date="{{ date }}"
+                            data-time-slot="{{ time.label }}"
+                            data-users="{{ shift.users|join:',' }}"
+                            data-max-slots="{{ shift.max_slots }}"
+                            data-role="volunteer"
+                            data-weekflag="WD">
+                            {% if request.user.is_staff and shift and shift.volunteers %}
+                                {% for vol in shift.volunteers %}
+                                    <div class="volunteer-name text-muted fst-italic"
+                                         draggable="true"
+                                         data-userid="{{ vol.id }}"
+                                         data-username="{{ vol.username }}"
+                                         data-date="{{ date }}"
+                                         data-timeslot="{{ time.label }}"
+                                         data-timeslotid="{{ time.id }}"
+                                         data-role="volunteer"
+                                         title="Frivillig – ikke redigerbar">
+                                        {{ vol.username }}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        </td>
                     {% endfor %}
                 </tr>
                 {% endfor %}
                 </tbody>
             </table>
 
-        </div> <!-- end desktop tables -->
+        </div>
 
         <!-- MOBILE CARDS -->
         <div class="d-block d-md-none">
@@ -269,22 +271,19 @@ data-weekflag="WD">
             <div class="card mb-3">
                 <div class="card-header">{{ weekday|translate_weekday }} – {{ date }}</div>
                 <div class="card-body">
+                    {% if daily_comments|dict_get:date %}
+                        <p><strong>Kommentar:</strong> {{ daily_comments|dict_get:date }}</p>
+                    {% endif %}
                     {% for time in weekday_times %}
                         {% get_shift shifts date time as shift %}
-
-                        <!-- Ansatt -->
                         <div class="mb-2">
                             <p><strong>{{ time.label }} – Ansatt:</strong></p>
                             {% if shift and shift.workers %}
                                 {% for worker in shift.workers %}
                                     {{ worker.username }}<br>
                                 {% endfor %}
-                            {% else %}
-                                –
-                            {% endif %}
+                            {% else %}–{% endif %}
                         </div>
-
-                        <!-- Volunteer -->
                         <div class="mb-2">
                             <p><strong>{{ time.label }} – Frivillig:</strong></p>
                             <div class="volunteer-slot"
@@ -294,37 +293,31 @@ data-weekflag="WD">
                                  data-users="{{ shift.users|join:',' }}"
                                  data-max-slots="{{ shift.max_slots }}"
                                  data-is-staff="{{ request.user.is_staff }}">
-                                <!-- Buttons will be populated by JS -->
                             </div>
                         </div>
-
                         <hr>
                     {% endfor %}
                 </div>
             </div>
             {% endfor %}
 
-            <!-- WEEKEND CARDS -->
             {% for date in weekend_dates %}
             <div class="card mb-3">
                 <div class="card-header">Lørdag – {{ date }}</div>
                 <div class="card-body">
+                    {% if daily_comments|dict_get:date %}
+                        <p><strong>Kommentar:</strong> {{ daily_comments|dict_get:date }}</p>
+                    {% endif %}
                     {% for time in saturday_times %}
                         {% get_shift shifts date time as shift %}
-
-                        <!-- Ansatt -->
                         <div class="mb-2">
                             <p><strong>{{ time.label }} – Ansatt:</strong></p>
                             {% if shift and shift.workers %}
                                 {% for worker in shift.workers %}
                                     {{ worker.username }}<br>
                                 {% endfor %}
-                            {% else %}
-                                –
-                            {% endif %}
+                            {% else %}–{% endif %}
                         </div>
-
-                        <!-- Volunteer -->
                         <div class="mb-2">
                             <p><strong>{{ time.label }} – Frivillig:</strong></p>
                             <div class="volunteer-slot"
@@ -334,10 +327,8 @@ data-weekflag="WD">
                                  data-users="{{ shift.users|join:',' }}"
                                  data-max-slots="{{ shift.max_slots }}"
                                  data-is-staff="{{ request.user.is_staff }}">
-                                <!-- Buttons will be populated by JS -->
                             </div>
                         </div>
-
                         <hr>
                     {% endfor %}
                 </div>
@@ -345,17 +336,14 @@ data-weekflag="WD">
             {% endfor %}
         </div>
 
-    </div> <!-- end content-layout -->
+    </div>
+</div>
 
-</div> <!-- end main-container -->
-
-<!-- Scripts -->
 <script>
-    // read user info from wrapper div
-    const scheduleEl = document.getElementById('schedule');
-    const loggedInUser = scheduleEl.dataset.username;
-    const loggedInUserId = scheduleEl.dataset.userId;
-    const csrftoken = '{{ csrf_token }}';
+const scheduleEl = document.getElementById('schedule');
+const loggedInUser = scheduleEl.dataset.username;
+const loggedInUserId = scheduleEl.dataset.userId;
+const csrftoken = '{{ csrf_token }}';
 </script>
 
 {% if request.user.is_staff %}

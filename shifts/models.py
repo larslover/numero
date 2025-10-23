@@ -81,6 +81,13 @@ class ShiftAssignment(models.Model):
 
     def __str__(self):
         return f"{self.user.username} som {self.get_role_display()} {self.date} kl. {self.time_slot}"
+# models.py
+class DailyComment(models.Model):
+    date = models.DateField(unique=True)
+    comment = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.date}: {self.comment[:20]}"
 
 class UserProfile(models.Model):
     ROLE_CHOICES = [
