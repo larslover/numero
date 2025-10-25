@@ -195,13 +195,14 @@ def schedule_view_context(request, week_offset=0):
 import json
 # views.py
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+
+from datetime import datetime
 
 @csrf_exempt
 def save_daily_comment(request):
     import json
-    from datetime import datetime
-    from django.http import JsonResponse
-
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -213,10 +214,13 @@ def save_daily_comment(request):
 
     date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
 
-    # Fake DB save just for testing
-    print("Saving comment for", date_obj, comment_text)
+    # Save or update the comment
+    comment_obj, created = DailyComment.objects.update_or_create(
+        date=date_obj,
+        defaults={"comment": comment_text}
+    )
 
-    return JsonResponse({"success": True, "comment": comment_text})
+    return JsonResponse({"success": True, "comment": comment_obj.comment})
 
 @login_required
 def my_bookings(request):

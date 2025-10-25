@@ -96,15 +96,18 @@
                     </tr>
                 </thead>
                 <tbody>
-               <!-- Daily comment row -->
+              <!-- Daily comment row -->
 <tr class="daily-comments-row">
     <td><strong>Kommentar:</strong></td>
     {% for weekday, date in weekdays_combined %}
         <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
             {% if request.user.is_staff %}
-                <textarea class="form-control form-control-sm daily-comment"
-                          data-date="{{ date }}"
-                          placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+                <div class="daily-comment-container">
+                    <textarea class="form-control form-control-sm daily-comment"
+                              data-date="{{ date }}"
+                              placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+                    <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
+                </div>
             {% else %}
                 {% if daily_comments|dict_get:date %}
                     {{ daily_comments|dict_get:date }}
@@ -115,6 +118,7 @@
         </td>
     {% endfor %}
 </tr>
+
 
 
                 {% for time in weekday_times %}
@@ -188,25 +192,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                <!-- Daily comment row for Saturday/weekend -->
+              <!-- Daily comment row for Saturday/weekend -->
 <tr class="daily-comments-row">
     <td><strong>Kommentar:</strong></td>
     {% for date in weekend_dates %}
-        <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
-            {% if request.user.is_staff %}
-                <textarea class="form-control form-control-sm daily-comment"
-                          data-date="{{ date }}"
-                          placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+    <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
+        {% if request.user.is_staff %}
+        <div class="daily-comment-container">
+            <textarea class="form-control form-control-sm daily-comment"
+                      data-date="{{ date }}"
+                      placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+            <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
+        </div>
+        
+        {% else %}
+            {% if daily_comments|dict_get:date %}
+                {{ daily_comments|dict_get:date }}
             {% else %}
-                {% if daily_comments|dict_get:date %}
-                    {{ daily_comments|dict_get:date }}
-                {% else %}
-                    <span class="text-muted fst-italic">Ingen kommentar</span>
-                {% endif %}
+                <span class="text-muted fst-italic">Ingen kommentar</span>
             {% endif %}
-        </td>
+        {% endif %}
+    </td>
+    
     {% endfor %}
 </tr>
+
 
 
                 {% for time in saturday_times %}

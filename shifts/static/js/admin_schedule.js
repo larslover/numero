@@ -1,3 +1,5 @@
+console.log("✅ admin_schedule.js loaded!");
+
 // === Global Variables ===
 let draggedWorkerData = null;
 
@@ -7,8 +9,6 @@ function allowDrop(event) {
 }
 
 // === Drag & Drop Handlers ===
-
-// Start dragging from sidebar list
 function handleDragStart(event) {
   const el = event.target;
   if (!el.classList.contains('worker')) return;
@@ -20,9 +20,9 @@ function handleDragStart(event) {
 
   event.dataTransfer.setData('text/plain', JSON.stringify(draggedWorkerData));
   el.classList.add('dragging');
+  console.debug('DragStart:', draggedWorkerData);
 }
 
-// Start dragging an assigned name (from slot) to trash
 function handleSlotToTrashDragStart(event) {
   const el = event.target;
   const data = {
@@ -32,21 +32,19 @@ function handleSlotToTrashDragStart(event) {
     timeSlotId: el.dataset.timeslotid,
   };
   event.dataTransfer.setData('application/json', JSON.stringify(data));
+  console.debug('Trash dragStart:', data);
 }
 
-// Handle dropping onto a slot
 function handleDrop(event) {
   event.preventDefault();
-
-  const slotEl = event.currentTarget; // always the td/slot
+  const slotEl = event.currentTarget;
   slotEl.classList.remove('drag-over');
 
   const raw = event.dataTransfer.getData('text/plain');
   if (!raw) return;
 
   let workerData;
-  try { workerData = JSON.parse(raw); } 
-  catch { return; }
+  try { workerData = JSON.parse(raw); } catch { return; }
 
   const date = slotEl.dataset.date;
   const timeSlot = slotEl.dataset.timeSlot || slotEl.dataset.timeslot;
@@ -57,12 +55,11 @@ function handleDrop(event) {
   if (!workerData.workerId || !date || !timeSlot) return;
 
   assignWorkerToShift(workerData.workerId, date, timeSlot, role, timeSlotId);
+  console.debug('Dropped worker:', workerData, 'into slot:', { date, timeSlot, role });
 }
 
-// Handle dropping onto trash
 function handleTrashDrop(event) {
   event.preventDefault();
-
   const json = event.dataTransfer.getData('application/json') || event.dataTransfer.getData('text/plain');
   if (!json) return;
 
@@ -73,6 +70,7 @@ function handleTrashDrop(event) {
   if (!workerId || !date || !timeSlotId) return;
 
   removeWorkerFromShift(workerId, date, timeSlotId);
+  console.debug('Removed worker:', data);
 }
 
 // === API Communication ===
@@ -88,10 +86,10 @@ function assignWorkerToShift(workerId, date, timeSlot, role='worker', timeSlotId
   })
   .then(res => res.json())
   .then(data => {
+    console.debug('Assign response:', data);
     if (data.status === 'success' || data.ok) location.reload();
-    else console.warn('Assignment failed:', data);
   })
-  .catch(err => console.error(err));
+  .catch(err => console.error('Assign fetch failed:', err));
 }
 
 function removeWorkerFromShift(workerId, date, timeSlotId) {
@@ -102,11 +100,13 @@ function removeWorkerFromShift(workerId, date, timeSlotId) {
   })
   .then(res => res.json())
   .then(() => location.reload())
-  .catch(err => console.error(err));
+  .catch(err => console.error('Remove fetch failed:', err));
 }
 
 // === Event Binding ===
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM fully loaded, binding events...');
+
   window.csrfToken = document.querySelector('[name=csrf-token]').content;
 
   // Sidebar draggable workers
@@ -116,6 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.worker-drop-target, .volunteer-slot, .worker-drop-zone, .worker-slot').forEach(slot => {
     slot.addEventListener('dragover', allowDrop);
     slot.addEventListener('drop', handleDrop);
+    slot.addEventListener('dragenter', () => slot.classList.add('drag-over'));
+    slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
   });
 
   // Assigned names draggable (to trash)
@@ -128,4 +130,55 @@ document.addEventListener('DOMContentLoaded', () => {
     bin.addEventListener('dragover', allowDrop);
     bin.addEventListener('drop', handleTrashDrop);
   });
+
+  // Save Daily Comment Button
+  document.body.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.save-comment-btn');
+    if (!btn) return;
+
+    console.log('💾 Save button clicked!', btn);
+
+    const container = btn.closest('.daily-comment-container');
+    const textarea = container?.querySelector('.daily-comment');
+    if (!textarea) {
+      console.warn('Textarea not found for Save button!', btn);
+      return;
+    }
+
+    const date = textarea.dataset.date;
+    const comment = textarea.value.trim();
+
+    console.log('Saving comment payload:', { date, comment });
+
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Saving…';
+
+    try {
+      const res = await fetch(window.scheduleConfig.saveDailyCommentUrl, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRFToken': window.scheduleConfig.csrfToken
+        },
+        credentials: 'include',
+        body: JSON.stringify({ date, comment })
+      });
+
+      const data = await res.json();
+      console.log('Server response:', data);
+
+      textarea.style.border = data.success ? '2px solid #28a745' : '2px solid red';
+      setTimeout(() => textarea.style.border = '', 1200);
+
+    } catch (err) {
+      console.error('Save request failed', err);
+      textarea.style.border = '2px solid red';
+      setTimeout(() => textarea.style.border = '', 1200);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+
 });

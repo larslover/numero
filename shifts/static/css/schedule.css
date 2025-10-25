@@ -306,3 +306,16 @@ table p, table li, td p {
   border-bottom: 1px solid #dee2e6;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
+.save-success {
+  border: 2px solid #28a745 !important;
+  background-color: #f8fff9 !important;
+}
+
+.save-error {
+  border: 2px solid #dc3545 !important;
+  background-color: #fff8f8 !important;
+}
+
+.daily-comment {
+  transition: all 0.3s ease;
+}
