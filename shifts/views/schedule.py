@@ -248,11 +248,31 @@ def my_bookings(request):
         "saturday_times": saturday_times,
     }
     return render(request, "shifts/my_bookings.html", context)
-
 @login_required
 def schedule_pdf_view(request, week_offset=0):
     # 1️⃣ Get all the schedule data (reuse helper)
     response_context = schedule_view_context(request, week_offset)
+
+    # ✅ Ensure daily_comments is in the context
+    if 'daily_comments' not in response_context:
+        from shifts.models import DailyComment
+        from datetime import timedelta, datetime
+        # Determine week dates
+        today = datetime.now()
+        target_week = today + timedelta(weeks=int(week_offset))
+        start_of_week = target_week - timedelta(days=target_week.weekday())
+        weekdays_combined = [
+            ((start_of_week + timedelta(days=i)).strftime("%A"),
+             (start_of_week + timedelta(days=i)).strftime("%Y-%m-%d"))
+            for i in range(5)
+        ]
+        saturday_date_str = (start_of_week + timedelta(days=5)).strftime("%Y-%m-%d")
+        week_dates = [date_str for _, date_str in weekdays_combined] + [saturday_date_str]
+
+        daily_comments_qs = DailyComment.objects.filter(date__in=week_dates)
+        response_context['daily_comments'] = {
+            dc.date.strftime("%Y-%m-%d"): dc.comment for dc in daily_comments_qs
+        }
 
     # 2️⃣ Render HTML from template
     html_string = render_to_string('shifts/schedule_pdf.html', response_context)
