@@ -7,6 +7,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token }}">
+    
+    <link rel="manifest" href="{% static 'shifts/manifest.json' %}">
+    <meta name="theme-color" content="#0d6efd">
+
     <title>Ukentlig Vaktplan</title>
     <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
     <!-- Bootstrap CSS -->
@@ -45,6 +49,11 @@
             {% if request.user.is_staff %}
             <a href="/en/admin/" class="btn btn-warning btn-sm mt-2 mt-md-0">← Tilbake til Admin</a>
             {% endif %}
+
+            <!-- PWA Install Button -->
+            <button id="install-btn" class="btn btn-primary btn-sm" style="display:none;">
+                📱 Installer app
+            </button>
         </div>
     </div>
 
@@ -96,30 +105,28 @@
                     </tr>
                 </thead>
                 <tbody>
-              <!-- Daily comment row -->
-<tr class="daily-comments-row">
-    <td><strong>Kommentar:</strong></td>
-    {% for weekday, date in weekdays_combined %}
-        <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
-            {% if request.user.is_staff %}
-                <div class="daily-comment-container">
-                    <textarea class="form-control form-control-sm daily-comment"
-                              data-date="{{ date }}"
-                              placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
-                    <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
-                </div>
-            {% else %}
-                {% if daily_comments|dict_get:date %}
-                    {{ daily_comments|dict_get:date }}
-                {% else %}
-                    <span class="text-muted fst-italic">Ingen kommentar</span>
-                {% endif %}
-            {% endif %}
-        </td>
-    {% endfor %}
-</tr>
-
-
+                <!-- Daily comment row -->
+                <tr class="daily-comments-row">
+                    <td><strong>Kommentar:</strong></td>
+                    {% for weekday, date in weekdays_combined %}
+                        <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
+                            {% if request.user.is_staff %}
+                                <div class="daily-comment-container">
+                                    <textarea class="form-control form-control-sm daily-comment"
+                                              data-date="{{ date }}"
+                                              placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+                                    <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
+                                </div>
+                            {% else %}
+                                {% if daily_comments|dict_get:date %}
+                                    {{ daily_comments|dict_get:date }}
+                                {% else %}
+                                    <span class="text-muted fst-italic">Ingen kommentar</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
 
                 {% for time in weekday_times %}
                 <tr>
@@ -192,32 +199,28 @@
                     </tr>
                 </thead>
                 <tbody>
-              <!-- Daily comment row for Saturday/weekend -->
-<tr class="daily-comments-row">
-    <td><strong>Kommentar:</strong></td>
-    {% for date in weekend_dates %}
-    <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
-        {% if request.user.is_staff %}
-        <div class="daily-comment-container">
-            <textarea class="form-control form-control-sm daily-comment"
-                      data-date="{{ date }}"
-                      placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
-            <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
-        </div>
-        
-        {% else %}
-            {% if daily_comments|dict_get:date %}
-                {{ daily_comments|dict_get:date }}
-            {% else %}
-                <span class="text-muted fst-italic">Ingen kommentar</span>
-            {% endif %}
-        {% endif %}
-    </td>
-    
-    {% endfor %}
-</tr>
-
-
+                <!-- Daily comment row for Saturday/weekend -->
+                <tr class="daily-comments-row">
+                    <td><strong>Kommentar:</strong></td>
+                    {% for date in weekend_dates %}
+                    <td colspan="2" class="daily-comment-cell" data-date="{{ date }}">
+                        {% if request.user.is_staff %}
+                        <div class="daily-comment-container">
+                            <textarea class="form-control form-control-sm daily-comment"
+                                      data-date="{{ date }}"
+                                      placeholder="Skriv kommentar...">{% if daily_comments|dict_get:date %}{{ daily_comments|dict_get:date }}{% endif %}</textarea>
+                            <button class="btn btn-sm btn-primary save-comment-btn">Save</button>
+                        </div>
+                        {% else %}
+                            {% if daily_comments|dict_get:date %}
+                                {{ daily_comments|dict_get:date }}
+                            {% else %}
+                                <span class="text-muted fst-italic">Ingen kommentar</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
 
                 {% for time in saturday_times %}
                 <tr>
@@ -348,38 +351,77 @@
 
     </div>
 </div>
+
+<!-- Existing scripts -->
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        console.log('✅ Test script running!');
-    
-        // Select all comment textareas
-        const textareas = document.querySelectorAll('.daily-comment');
-        console.log('Found comment boxes:', textareas.length);
-    
-        // Add a simple input listener to log typing
-        textareas.forEach((ta, i) => {
-            ta.addEventListener('input', () => {
-                console.log(`Typing in comment box #${i}`, { value: ta.value, date: ta.dataset.date });
-            });
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('✅ Test script running!');
+
+    const textareas = document.querySelectorAll('.daily-comment');
+    console.log('Found comment boxes:', textareas.length);
+
+    textareas.forEach((ta, i) => {
+        ta.addEventListener('input', () => {
+            console.log(`Typing in comment box #${i}`, { value: ta.value, date: ta.dataset.date });
         });
     });
-    </script>
-    
+});
+</script>
+
 <script>
-    window.scheduleConfig = {
-        csrfToken: '{{ csrf_token }}',
-        saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
-        loggedInUser: "{{ request.user.username|escapejs }}",
-        loggedInUserId: "{{ request.user.id }}"
-    };
-    </script>
-    
+window.scheduleConfig = {
+    csrfToken: '{{ csrf_token }}',
+    saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
+    loggedInUser: "{{ request.user.username|escapejs }}",
+    loggedInUserId: "{{ request.user.id }}"
+};
+</script>
 
 {% if request.user.is_staff %}
     <script src="{% static 'js/admin_schedule.js' %}"></script>
 {% else %}
     <script src="{% static 'js/schedule.js' %}"></script>
 {% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker
+                .register("/service-worker.js")
+                .then(reg => console.log("SW registered:", reg))
+                .catch(err => console.error("SW registration failed:", err));
+        }
+    });
+    </script>
+    
+    
+<!-- PWA install script -->
+<script>
+let deferredPrompt;
+window.addEventListener('DOMContentLoaded', () => {
+    const installBtn = document.getElementById('install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'inline-block';
+    });
+
+    installBtn.addEventListener('click', async () => {
+        installBtn.style.display = 'none';
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('User response to install prompt:', outcome);
+            deferredPrompt = null;
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed!');
+    });
+});
+</script>
 
 </body>
 </html>

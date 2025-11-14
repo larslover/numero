@@ -12,10 +12,23 @@ from django.http import HttpResponse
 import weasyprint
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
+
+
+
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+# views.py
+from django.http import FileResponse
+from django.views.decorators.cache import never_cache
+import os
+from django.conf import settings
 
+
+
+def service_worker(request):
+    sw_path = os.path.join(settings.BASE_DIR, "shiftbooking", "service-worker.js")
+    return FileResponse(open(sw_path, "rb"), content_type="application/javascript")
 
 
 @login_required

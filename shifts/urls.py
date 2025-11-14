@@ -12,6 +12,7 @@ urlpatterns = [
     # Allow negative week_offset for PDF download
     re_path(r'^schedule/pdf/(?P<week_offset>-?\d+)/$', schedule_pdf_view, name='schedule_pdf'),
     path('save-daily-comment/', save_daily_comment, name='save_daily_comment'),
+   
 
     # Password reset routes
     path('password_reset/', auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'), name='password_reset'),
