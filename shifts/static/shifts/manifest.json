@@ -1,6 +1,6 @@
 {
-  "name": "ShiftBooking",
-  "short_name": "ShiftBooking",
+  "name": "Turnus",
+  "short_name": "Turnus",
   "id": "/",
   "start_url": "/schedule/",
   "scope": "/",

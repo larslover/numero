@@ -1,4 +1,5 @@
-const CACHE_NAME = "shiftbooking-cache-v2";
+const CACHE_NAME = "turnus-cache-v1";
+
 
 
 const urlsToCache = [
