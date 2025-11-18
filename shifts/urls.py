@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 
 from .views_auth import custom_login, signup, custom_logout
 from .views_admin import approve_users, admin_dashboard_view, assign_worker, get_time_slots, assign_shift
-from .views.schedule import schedule_view, my_bookings, schedule_pdf_view,save_daily_comment
+from .views.schedule import schedule_view, my_bookings, schedule_pdf_view,save_daily_comment,get_csrf
 from .views.shift_actions import join_shift, cancel_shift, save_shifts, get_saved_shifts, my_shifts_view
 import shifts.views_admin as views_admin
 
@@ -12,6 +12,7 @@ urlpatterns = [
     # Allow negative week_offset for PDF download
     re_path(r'^schedule/pdf/(?P<week_offset>-?\d+)/$', schedule_pdf_view, name='schedule_pdf'),
     path('save-daily-comment/', save_daily_comment, name='save_daily_comment'),
+        path("get-csrf/", get_csrf, name="get_csrf"),
    
 
     # Password reset routes

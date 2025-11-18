@@ -373,7 +373,23 @@
 
     </div>
 </div>
-
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        fetch("/get-csrf/", { credentials: "include" })
+            .then(res => res.json())
+            .then(data => {
+                // Update all forms with latest token
+                document.querySelectorAll("input[name=csrfmiddlewaretoken]")
+                    .forEach(i => i.value = data.csrf);
+    
+                // Update global config used by JS
+                if (window.scheduleConfig)
+                    window.scheduleConfig.csrfToken = data.csrf;
+            })
+            .catch(err => console.warn("CSRF refresh failed:", err));
+    });
+    </script>
+    
 <!-- Existing scripts -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {

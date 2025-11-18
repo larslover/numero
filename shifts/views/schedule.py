@@ -24,6 +24,14 @@ from django.views.decorators.cache import never_cache
 import os
 from django.conf import settings
 
+# shifts/views/security.py
+
+from django.http import JsonResponse
+from django.middleware.csrf import get_token
+
+def get_csrf(request):
+    """Return a fresh CSRF token as JSON."""
+    return JsonResponse({"csrf": get_token(request)})
 
 
 def service_worker(request):
