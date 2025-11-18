@@ -1,23 +1,33 @@
 {% load static %}
 {% load i18n %}
 
-
 <!DOCTYPE html>
 <html lang="no">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{% block title %}My App{% endblock %}</title>
-        <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-        {% block extra_head %}{% endblock %}
-    </head>
-    
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}My App{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Schedule only CSS -->
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
 <body>
-    <h1>Velkommen til Cafe Numero 13 sin turnusplan!</h1>
-    <hr>
+    <!-- HEADER (shown only on schedule pages) -->
+    {% block header %}
+        <h1 class="text-center mt-3">Velkommen til Cafe Numero 13 sin turnusplan!</h1>
+        <hr>
+    {% endblock %}
+
+    <!-- MAIN CONTENT -->
     {% block content %}{% endblock %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
