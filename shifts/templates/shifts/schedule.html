@@ -444,6 +444,68 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
-
+<!-- iOS PWA Cookie Fix -->
+<script>
+    (function () {
+    
+        // Detect iOS device
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    
+        // Detect standalone mode (PWA installed on home screen)
+        const isStandalone = window.navigator.standalone === true;
+    
+        // If not iOS PWA → exit
+        if (!isIOS || !isStandalone) return;
+    
+        // Try to set a test cookie
+        document.cookie = "pwa_test_cookie=1; path=/";
+    
+        // Verify if it actually works
+        const cookieWorks = document.cookie.includes("pwa_test_cookie=1");
+    
+        if (!cookieWorks) {
+            // Build banner
+            const banner = document.createElement("div");
+            banner.style.position = "fixed";
+            banner.style.bottom = "0";
+            banner.style.left = "0";
+            banner.style.right = "0";
+            banner.style.background = "#fff3cd";
+            banner.style.color = "#000";
+            banner.style.padding = "14px";
+            banner.style.textAlign = "center";
+            banner.style.fontSize = "15px";
+            banner.style.zIndex = "999999";
+            banner.style.borderTop = "2px solid #ffcc00";
+            banner.style.boxShadow = "0 -3px 8px rgba(0,0,0,0.15)";
+            banner.style.fontFamily = "system-ui, sans-serif";
+    
+            banner.innerHTML = `
+                ⚠️ <strong>Appen kan ikke lagre data i PWA-modus.</strong><br>
+                Åpne nettsiden én gang i Safari for å aktivere innlogging og cookies.<br><br>
+                <a id="openSafariBtn"
+                   style="display:inline-block;
+                          background:#007aff;
+                          color:white;
+                          padding:10px 18px;
+                          border-radius:10px;
+                          font-weight:600;
+                          text-decoration:none;">
+                    Åpne i Safari
+                </a>
+            `;
+    
+            document.body.appendChild(banner);
+    
+            // Open in Safari → same URL but outside PWA
+            const openButton = document.getElementById("openSafariBtn");
+            openButton.onclick = () => {
+                window.location.href = window.location.href; // launches Safari automatically
+            };
+        }
+    
+    })();
+    </script>
+        
 </body>
 </html>
