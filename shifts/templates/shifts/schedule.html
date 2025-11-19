@@ -375,153 +375,89 @@
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
+        // --- CSRF refresh ---
         fetch("/get-csrf/", { credentials: "include" })
             .then(res => res.json())
             .then(data => {
-                // Update all forms with latest token
                 document.querySelectorAll("input[name=csrfmiddlewaretoken]")
                     .forEach(i => i.value = data.csrf);
-    
-                // Update global config used by JS
-                if (window.scheduleConfig)
-                    window.scheduleConfig.csrfToken = data.csrf;
+                if (window.scheduleConfig) window.scheduleConfig.csrfToken = data.csrf;
             })
             .catch(err => console.warn("CSRF refresh failed:", err));
-    });
-    </script>
     
-<!-- Existing scripts -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ Test script running!');
-
-    const textareas = document.querySelectorAll('.daily-comment');
-    console.log('Found comment boxes:', textareas.length);
-
-    textareas.forEach((ta, i) => {
-        ta.addEventListener('input', () => {
-            console.log(`Typing in comment box #${i}`, { value: ta.value, date: ta.dataset.date });
+        // --- Daily comments debug logging ---
+        const textareas = document.querySelectorAll('.daily-comment');
+        textareas.forEach((ta, i) => {
+            ta.addEventListener('input', () => {
+                console.log(`Typing in comment box #${i}`, { value: ta.value, date: ta.dataset.date });
+            });
         });
-    });
-});
-</script>
-
-<script>
-window.scheduleConfig = {
-    csrfToken: '{{ csrf_token }}',
-    saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
-    loggedInUser: "{{ request.user.username|escapejs }}",
-    loggedInUserId: "{{ request.user.id }}"
-};
-</script>
-
-{% if request.user.is_staff %}
-    <script src="{% static 'js/admin_schedule.js' %}"></script>
-{% else %}
-    <script src="{% static 'js/schedule.js' %}"></script>
-{% endif %}
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
+    
+        // --- Service Worker registration ---
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker
-                .register("/service-worker.js")
+            navigator.serviceWorker.register("/service-worker.js")
                 .then(reg => console.log("SW registered:", reg))
                 .catch(err => console.error("SW registration failed:", err));
         }
+    
+        // --- PWA install prompt ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'inline-block';
+        });
+        installBtn.addEventListener('click', async () => {
+            installBtn.style.display = 'none';
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('User response to install prompt:', outcome);
+                deferredPrompt = null;
+            }
+        });
+        window.addEventListener('appinstalled', () => console.log('PWA was installed!'));
+    
+        // --- iOS PWA detection and admin auto-redirect ---
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.navigator.standalone === true;
+
+if (isIOS && isStandalone) {
+    const adminPaths = ['/en/admin', '/no/admin'];
+    if (adminPaths.some(path => window.location.pathname.startsWith(path))) {
+        // Auto-redirect immediately to Safari
+        window.location.href = window.location.href;
+    }
+}
+
     });
     </script>
     
-    
-<!-- PWA install script -->
-<script>
-let deferredPrompt;
-window.addEventListener('DOMContentLoaded', () => {
-    const installBtn = document.getElementById('install-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        installBtn.style.display = 'inline-block';
-    });
-
-    installBtn.addEventListener('click', async () => {
-        installBtn.style.display = 'none';
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log('User response to install prompt:', outcome);
-            deferredPrompt = null;
-        }
-    });
-
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed!');
-    });
-});
-</script>
-<!-- iOS PWA Cookie Fix -->
-<script>
-    (function () {
-    
-        // Detect iOS device
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    
-        // Detect standalone mode (PWA installed on home screen)
-        const isStandalone = window.navigator.standalone === true;
-    
-        // If not iOS PWA → exit
-        if (!isIOS || !isStandalone) return;
-    
-        // Try to set a test cookie
-        document.cookie = "pwa_test_cookie=1; path=/";
-    
-        // Verify if it actually works
-        const cookieWorks = document.cookie.includes("pwa_test_cookie=1");
-    
-        if (!cookieWorks) {
-            // Build banner
-            const banner = document.createElement("div");
-            banner.style.position = "fixed";
-            banner.style.bottom = "0";
-            banner.style.left = "0";
-            banner.style.right = "0";
-            banner.style.background = "#fff3cd";
-            banner.style.color = "#000";
-            banner.style.padding = "14px";
-            banner.style.textAlign = "center";
-            banner.style.fontSize = "15px";
-            banner.style.zIndex = "999999";
-            banner.style.borderTop = "2px solid #ffcc00";
-            banner.style.boxShadow = "0 -3px 8px rgba(0,0,0,0.15)";
-            banner.style.fontFamily = "system-ui, sans-serif";
-    
-            banner.innerHTML = `
-                ⚠️ <strong>Appen kan ikke lagre data i PWA-modus.</strong><br>
-                Åpne nettsiden én gang i Safari for å aktivere innlogging og cookies.<br><br>
-                <a id="openSafariBtn"
-                   style="display:inline-block;
-                          background:#007aff;
-                          color:white;
-                          padding:10px 18px;
-                          border-radius:10px;
-                          font-weight:600;
-                          text-decoration:none;">
-                    Åpne i Safari
-                </a>
-            `;
-    
-            document.body.appendChild(banner);
-    
-            // Open in Safari → same URL but outside PWA
-            const openButton = document.getElementById("openSafariBtn");
-            openButton.onclick = () => {
-                window.location.href = window.location.href; // launches Safari automatically
-            };
-        }
-    
-    })();
+    <script>
+    window.scheduleConfig = {
+        csrfToken: '{{ csrf_token }}',
+        saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
+        loggedInUser: "{{ request.user.username|escapejs }}",
+        loggedInUserId: "{{ request.user.id }}"
+    };
     </script>
         
+    <script>
+    window.scheduleConfig = {
+        csrfToken: '{{ csrf_token }}',
+        saveDailyCommentUrl: "{% url 'save_daily_comment' %}",
+        loggedInUser: "{{ request.user.username|escapejs }}",
+        loggedInUserId: "{{ request.user.id }}"
+    };
+    </script>
+            
+        {% if request.user.is_staff %}
+        <script src="{% static 'js/admin_schedule.js' %}"></script>
+        {% else %}
+        <script src="{% static 'js/schedule.js' %}"></script>
+        {% endif %}
+            
+
 </body>
 </html>
